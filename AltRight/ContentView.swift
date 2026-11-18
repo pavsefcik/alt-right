@@ -41,11 +41,14 @@ final class StatusModel: ObservableObject {
 
 struct ContentView: View {
     @ObservedObject private var status = StatusModel.shared
+    @ObservedObject private var bookmarks = BookmarkStore.shared
+    @ObservedObject private var history = HistoryStore.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             header
             setupCard
+            bookmarksCard
         }
         .padding(24)
         .frame(width: 480)
@@ -81,6 +84,60 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+        }
+    }
+
+    private var bookmarksCard: some View {
+        Card(title: L("Bookmarks")) {
+            HStack(spacing: 10) {
+                Image(systemName: "bookmark")
+                    .foregroundStyle(.secondary)
+                Text(String(format: L("%d bookmarks"), bookmarks.bookmarks.count))
+                    .font(.system(size: 13, weight: .medium))
+                Spacer(minLength: 0)
+                Button(L("Search Bookmarks…")) {
+                    BookmarkCoordinator.shared.showSearch()
+                }
+                .controlSize(.small)
+            }
+
+            HStack(spacing: 10) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .foregroundStyle(.secondary)
+                Text(String(format: L("%d copied paths"), history.entries.count))
+                    .font(.system(size: 13, weight: .medium))
+                Spacer(minLength: 0)
+                Button(L("History")) {
+                    BookmarkCoordinator.shared.showHistory()
+                }
+                .controlSize(.small)
+            }
+
+            Divider()
+
+            HStack(spacing: 8) {
+                Button(L("Open Data Folder")) {
+                    NSWorkspace.shared.open(bookmarks.dataFolderURL)
+                }
+                .controlSize(.small)
+
+                Button(L("Reveal Data File")) {
+                    NSWorkspace.shared.activateFileViewerSelecting([bookmarks.fileURL])
+                }
+                .controlSize(.small)
+
+                Spacer(minLength: 0)
+
+                Button(L("Reload")) {
+                    bookmarks.load()
+                    history.load()
+                }
+                .controlSize(.small)
+            }
+        }
+        .onAppear {
+            bookmarks.load()
+            history.load()
         }
     }
 
@@ -178,6 +235,20 @@ private struct StatusRow: View {
 
 struct MenuBarView: View {
     var body: some View {
+        Button(L("Search Bookmarks…")) {
+            DispatchQueue.main.async {
+                BookmarkCoordinator.shared.showSearch()
+            }
+        }
+
+        Button(L("Add Bookmark…")) {
+            DispatchQueue.main.async {
+                BookmarkCoordinator.shared.presentNewBookmark()
+            }
+        }
+
+        Divider()
+
         Button(L("Copy Path")) { run(.copyPath) }
             .keyboardShortcut("c", modifiers: [.command, .option])
 
@@ -185,10 +256,16 @@ struct MenuBarView: View {
         // clipboard, so it has no shortcut of its own.
         Button(L("Paste Path")) { run(.pastePath) }
 
-        Button(L("Go to Folder")) { run(.goToFolder) }
+        Button(L("History")) {
+            DispatchQueue.main.async {
+                BookmarkCoordinator.shared.showHistory()
+            }
+        }
+
+        Button(L("Go to Folder") + "…") { run(.goToFolder) }
             .keyboardShortcut("g", modifiers: [.command, .shift])
 
-        Button(L("Connect to Server")) { run(.connectToServer) }
+        Button(L("Connect to Server") + "…") { run(.connectToServer) }
             .keyboardShortcut("k", modifiers: .command)
 
         Divider()

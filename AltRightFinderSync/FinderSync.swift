@@ -4,6 +4,9 @@ import FinderSync
 final class FinderSync: FIFinderSync {
     private enum Command: String {
         case pastePath = "paste-path"
+        case searchBookmarks = "search-bookmarks"
+        case addBookmark = "add-bookmark"
+        case recordHistory = "record-history"
     }
 
     override init() {
@@ -69,6 +72,9 @@ final class FinderSync: FIFinderSync {
 
         addCopyPath(to: submenu)
         addPastePath(to: submenu)
+        submenu.addItem(.separator())
+        addSearchBookmarks(to: submenu)
+        addAddBookmark(to: submenu)
 
         item.submenu = submenu
         root.addItem(item)
@@ -97,6 +103,28 @@ final class FinderSync: FIFinderSync {
         menu.addItem(paste)
     }
 
+    private func addSearchBookmarks(to menu: NSMenu) {
+        let item = NSMenuItem(
+            title: L("Search Bookmarks…"),
+            action: #selector(searchBookmarks(_:)),
+            keyEquivalent: ""
+        )
+        item.target = self
+        item.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil)
+        menu.addItem(item)
+    }
+
+    private func addAddBookmark(to menu: NSMenu) {
+        let item = NSMenuItem(
+            title: L("Add Bookmark…"),
+            action: #selector(addBookmark(_:)),
+            keyEquivalent: ""
+        )
+        item.target = self
+        item.image = NSImage(systemSymbolName: "bookmark.badge.plus", accessibilityDescription: nil)
+        menu.addItem(item)
+    }
+
     // MARK: - Actions
 
     @objc private func copyPath(_ sender: AnyObject?) {
@@ -110,20 +138,55 @@ final class FinderSync: FIFinderSync {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(paths.joined(separator: "\n"), forType: .string)
+
+        if let data = Self.encodePaths(paths) {
+            send(.recordHistory, data: data, activates: false)
+        }
     }
 
     @objc private func pastePath(_ sender: AnyObject?) {
         send(.pastePath)
     }
 
-    private func send(_ command: Command) {
-        guard let url = URL(string: "\(Self.appURLScheme)://\(command.rawValue)") else { return }
-        NSWorkspace.shared.open(url)
+    @objc private func searchBookmarks(_ sender: AnyObject?) {
+        send(.searchBookmarks)
+    }
+
+    @objc private func addBookmark(_ sender: AnyObject?) {
+        let paths = targets().map(Self.displayPath)
+        guard !paths.isEmpty, let data = Self.encodePaths(paths) else {
+            NSSound.beep()
+            return
+        }
+        send(.addBookmark, data: data)
+    }
+
+    private func send(_ command: Command, data: String? = nil, activates: Bool = true) {
+        var components = URLComponents()
+        components.scheme = Self.appURLScheme
+        components.host = command.rawValue
+        if let data {
+            components.queryItems = [URLQueryItem(name: "data", value: data)]
+        }
+
+        guard let url = components.url else { return }
+
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = activates
+        NSWorkspace.shared.open(url, configuration: configuration, completionHandler: nil)
     }
 
     // MARK: - Helpers
 
     private static let appURLScheme = "altright"
+
+    private static func encodePaths(_ paths: [String]) -> String? {
+        guard let data = try? JSONEncoder().encode(paths) else { return nil }
+        return data.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
 
     /// `path` on a directory URL keeps a trailing slash; Finder's ⌥⌘C does not.
     private static func displayPath(for url: URL) -> String {

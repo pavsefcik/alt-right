@@ -39,6 +39,56 @@ EN = {
     "open_settings": "Open System Settings",
     "ok": "OK",
     "tooltip": "Alt Right actions",
+    "search_bookmarks": "Search Bookmarks…",
+    "add_bookmark": "Add Bookmark…",
+    "history": "History",
+    "bookmarks": "Bookmarks",
+    "search_bookmarks_placeholder": "Search bookmarks",
+    "no_bookmarks": "No bookmarks yet",
+    "no_bookmarks_body": "Add bookmarks from Finder or with the Add Bookmark button.",
+    "no_matches": "No matches",
+    "try_different_search": "Try a different search.",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "open": "Open",
+    "cancel": "Cancel",
+    "save": "Save",
+    "title": "Title",
+    "description": "Description",
+    "path_or_url": "Path or URL",
+    "clear": "Clear",
+    "edit_bookmark": "Edit Bookmark",
+    "delete_bookmarks": "Delete Bookmarks",
+    "delete_one_body": "This bookmark will be removed. This cannot be undone.",
+    "delete_many_body": "%d bookmarks will be removed. This cannot be undone.",
+    "could_not_delete": "Could Not Delete",
+    "could_not_read_bookmarks": "Could Not Read Bookmarks",
+    "could_not_read_history": "Could Not Read History",
+    "remove_bookmark": "Remove Bookmark",
+    "add_bookmarks_count": "Add %d bookmarks?",
+    "skipped_existing": "%d paths are already bookmarks and will be skipped.",
+    "auto_titles_note": "Titles will be created from each item’s file name.",
+    "already_added": "Bookmarks Already Added",
+    "already_added_body": "Every selected path is already a bookmark.",
+    "some_add_failed": "Some Bookmarks Could Not Be Added",
+    "invalid_path_body": "Enter an absolute path, a file URL, an SMB URL, or an HTTP(S) URL.",
+    "path_exists_body": "A bookmark for this path already exists.",
+    "no_history": "No copied paths yet",
+    "no_history_body": "Use Copy Path in Finder or the menu bar and it will appear here.",
+    "clear_history_question": "Clear Copied Path History?",
+    "clear_history_body": "Every copied path will be removed from History. Bookmarks are not affected.",
+    "clear_history": "Clear History",
+    "remove": "Remove",
+    "copy": "Copy",
+    "bookmarks_count": "%d bookmarks",
+    "bookmarks_of_count": "%d of %d bookmarks",
+    "copied_paths_count": "%d copied paths",
+    "open_data_folder": "Open Data Folder",
+    "reveal_data_file": "Reveal Data File",
+    "reload": "Reload",
+    "add_one_bookmark": "Add %d bookmark?",
+    "skipped_one_existing": "%d path is already a bookmark and will be skipped.",
 }
 
 T = {
@@ -466,8 +516,9 @@ APP_KEYS = [
     "how_to", "how_to_body", "cloud_note", "copy_path", "paste_path", "go_to_folder", "connect_server",
     "open_app", "quit_app", "not_a_path", "not_a_path_body", "not_found",
     "not_found_body", "ax_needed_title", "ax_needed_body", "open_settings", "ok",
+    "search_bookmarks", "add_bookmark", "history", "bookmarks", "search_bookmarks_placeholder", "no_bookmarks", "no_bookmarks_body", "no_matches", "try_different_search", "add", "edit", "delete", "open", "cancel", "save", "title", "description", "path_or_url", "clear", "edit_bookmark", "delete_bookmarks", "delete_one_body", "delete_many_body", "could_not_delete", "could_not_read_bookmarks", "could_not_read_history", "remove_bookmark", "add_bookmarks_count", "skipped_existing", "auto_titles_note", "already_added", "already_added_body", "some_add_failed", "invalid_path_body", "path_exists_body", "no_history", "no_history_body", "clear_history_question", "clear_history_body", "clear_history", "remove", "copy", "bookmarks_count", "bookmarks_of_count", "copied_paths_count", "open_data_folder", "reveal_data_file", "reload", "add_one_bookmark", "skipped_one_existing",
 ]
-EXTENSION_KEYS = ["copy_path", "paste_path", "connect_server", "tooltip"]
+EXTENSION_KEYS = ["copy_path", "paste_path", "search_bookmarks", "add_bookmark", "connect_server", "tooltip"]
 
 def escape(text: str) -> str:
     return text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
@@ -492,7 +543,7 @@ def main() -> None:
     for target, keys in (("AltRight", APP_KEYS), ("AltRightFinderSync", EXTENSION_KEYS)):
         write(target, keys, "en", {EN[k]: EN[k] for k in keys})
         for language, table in T.items():
-            write(target, keys, language, {EN[k]: table[k] for k in keys})
+            write(target, keys, language, {EN[k]: table.get(k, EN[k]) for k in keys})
     print("wrote", len(T) + 1, "languages")
 
 

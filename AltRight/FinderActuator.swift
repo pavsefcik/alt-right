@@ -30,9 +30,28 @@ enum FinderActuator {
             return
         }
 
+        let pasteboard = NSPasteboard.general
+        let changeCountBeforeCopy = pasteboard.changeCount
+
         activateFinder()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
             Keys.press(.c, flags: [.maskCommand, .maskAlternate])
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            guard pasteboard.changeCount != changeCountBeforeCopy,
+                  let text = pasteboard.string(forType: .string) else {
+                return
+            }
+
+            let paths = text
+                .split(separator: "\n")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+
+            if !paths.isEmpty {
+                BookmarkCoordinator.shared.recordHistory(paths: paths)
+            }
         }
     }
 

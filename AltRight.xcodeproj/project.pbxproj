@@ -23,6 +23,17 @@
 		AA000000000000000000003F /* FinderSync.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA000000000000000000003E /* FinderSync.framework */; };
 		AA0000000000000000000041 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000040 /* ApplicationServices.framework */; };
 		AA0000000000000000000044 /* AltRightFinderSync.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000043 /* AltRightFinderSync.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CC0000000000000000000001 /* Bookmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000001 /* Bookmark.swift */; };
+		CC0000000000000000000002 /* BookmarkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000002 /* BookmarkStore.swift */; };
+		CC0000000000000000000003 /* FuzzyMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000003 /* FuzzyMatcher.swift */; };
+		CC0000000000000000000004 /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000004 /* HistoryStore.swift */; };
+		CC0000000000000000000005 /* PathPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000005 /* PathPayload.swift */; };
+		CC0000000000000000000006 /* BookmarkOpener.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000006 /* BookmarkOpener.swift */; };
+		CC0000000000000000000007 /* BookmarkSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000007 /* BookmarkSearchView.swift */; };
+		CC0000000000000000000008 /* BookmarkEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000008 /* BookmarkEditorView.swift */; };
+		CC0000000000000000000009 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000009 /* HistoryView.swift */; };
+		CC000000000000000000000A /* BookmarkWindows.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000A /* BookmarkWindows.swift */; };
+		CC000000000000000000000B /* BookmarkCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000B /* BookmarkCoordinator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,6 +107,17 @@
 		AA000000000000000000003C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = zh-Hans; path = zh-Hans.lproj/Localizable.strings; sourceTree = "<group>"; };
 		AA000000000000000000003E /* FinderSync.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FinderSync.framework; path = System/Library/Frameworks/FinderSync.framework; sourceTree = SDKROOT; };
 		AA0000000000000000000040 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
+		BB0000000000000000000001 /* Bookmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bookmark.swift; sourceTree = "<group>"; };
+		BB0000000000000000000002 /* BookmarkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkStore.swift; sourceTree = "<group>"; };
+		BB0000000000000000000003 /* FuzzyMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FuzzyMatcher.swift; sourceTree = "<group>"; };
+		BB0000000000000000000004 /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStore.swift; sourceTree = "<group>"; };
+		BB0000000000000000000005 /* PathPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PathPayload.swift; sourceTree = "<group>"; };
+		BB0000000000000000000006 /* BookmarkOpener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkOpener.swift; sourceTree = "<group>"; };
+		BB0000000000000000000007 /* BookmarkSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkSearchView.swift; sourceTree = "<group>"; };
+		BB0000000000000000000008 /* BookmarkEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkEditorView.swift; sourceTree = "<group>"; };
+		BB0000000000000000000009 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		BB000000000000000000000A /* BookmarkWindows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkWindows.swift; sourceTree = "<group>"; };
+		BB000000000000000000000B /* BookmarkCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkCoordinator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,6 +161,7 @@
 				AA0000000000000000000011 /* Localized.swift */,
 				AA0000000000000000000013 /* Permissions.swift */,
 				AA0000000000000000000015 /* Support.swift */,
+				BB00000000000000000000BC /* Bookmarks */,
 				AA0000000000000000000018 /* Localizable.strings */,
 				AA00000000000000000000F2 /* AppIcon.icns */,
 				AA0000000000000000000017 /* Info.plist */,
@@ -174,6 +197,24 @@
 				AA0000000000000000000043 /* AltRightFinderSync.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		BB00000000000000000000BC /* Bookmarks */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000001 /* Bookmark.swift */,
+				BB0000000000000000000002 /* BookmarkStore.swift */,
+				BB0000000000000000000003 /* FuzzyMatcher.swift */,
+				BB0000000000000000000004 /* HistoryStore.swift */,
+				BB0000000000000000000005 /* PathPayload.swift */,
+				BB0000000000000000000006 /* BookmarkOpener.swift */,
+				BB0000000000000000000007 /* BookmarkSearchView.swift */,
+				BB0000000000000000000008 /* BookmarkEditorView.swift */,
+				BB0000000000000000000009 /* HistoryView.swift */,
+				BB000000000000000000000A /* BookmarkWindows.swift */,
+				BB000000000000000000000B /* BookmarkCoordinator.swift */,
+			);
+			path = Bookmarks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -298,6 +339,17 @@
 				AA0000000000000000000012,
 				AA0000000000000000000014,
 				AA0000000000000000000016,
+				CC0000000000000000000001,
+				CC0000000000000000000002,
+				CC0000000000000000000003,
+				CC0000000000000000000004,
+				CC0000000000000000000005,
+				CC0000000000000000000006,
+				CC0000000000000000000007,
+				CC0000000000000000000008,
+				CC0000000000000000000009,
+				CC000000000000000000000A,
+				CC000000000000000000000B,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
