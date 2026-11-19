@@ -53,7 +53,10 @@ final class BookmarkStore: ObservableObject {
             return true
         }
 
-        updated.append(bookmark)
+        // Newest first: the list is what `Search Bookmarks` shows, and the
+        // thing you just added is the thing you are most likely to look for.
+        // Existing entries keep their position (editing must not reorder).
+        updated.insert(bookmark, at: 0)
         try save(updated)
         bookmarks = updated
         return false

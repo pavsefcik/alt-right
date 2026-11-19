@@ -1,11 +1,15 @@
 import Cocoa
 import FinderSync
 
+/// One mark for the whole app: an arrow pointing up and to the right.
+let altRightIconName = "arrow.up.right"
+
 final class FinderSync: FIFinderSync {
     private enum Command: String {
         case pastePath = "paste-path"
         case searchBookmarks = "search-bookmarks"
         case addBookmark = "add-bookmark"
+        case openHistory = "open-history"
         case recordHistory = "record-history"
     }
 
@@ -65,7 +69,7 @@ final class FinderSync: FIFinderSync {
 
         let title = L("Alt Right")
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        item.image = NSImage(systemSymbolName: "cursorarrow.click.2", accessibilityDescription: nil)
+        item.image = NSImage(systemSymbolName: altRightIconName, accessibilityDescription: nil)
 
         let submenu = NSMenu(title: title)
         submenu.autoenablesItems = false
@@ -75,6 +79,7 @@ final class FinderSync: FIFinderSync {
         submenu.addItem(.separator())
         addSearchBookmarks(to: submenu)
         addAddBookmark(to: submenu)
+        addHistory(to: submenu)
 
         item.submenu = submenu
         root.addItem(item)
@@ -121,7 +126,20 @@ final class FinderSync: FIFinderSync {
             keyEquivalent: ""
         )
         item.target = self
-        item.image = NSImage(systemSymbolName: "bookmark.badge.plus", accessibilityDescription: nil)
+        // "bookmark.badge.plus" does not exist as an SF Symbol, so this item
+        // silently had no icon at all.
+        item.image = NSImage(systemSymbolName: "bookmark", accessibilityDescription: nil)
+        menu.addItem(item)
+    }
+
+    private func addHistory(to menu: NSMenu) {
+        let item = NSMenuItem(
+            title: L("History"),
+            action: #selector(openHistory(_:)),
+            keyEquivalent: ""
+        )
+        item.target = self
+        item.image = NSImage(systemSymbolName: "clock.arrow.circlepath", accessibilityDescription: nil)
         menu.addItem(item)
     }
 
@@ -149,11 +167,17 @@ final class FinderSync: FIFinderSync {
     }
 
     @objc private func searchBookmarks(_ sender: AnyObject?) {
-        send(.searchBookmarks)
+        // The path is not needed to search, but it tells the app what was
+        // clicked last, which is what "Add Bookmark…" prefills.
+        send(.searchBookmarks, data: Self.encodePaths(clickedTargets().map(Self.displayPath)))
+    }
+
+    @objc private func openHistory(_ sender: AnyObject?) {
+        send(.openHistory, data: Self.encodePaths(clickedTargets().map(Self.displayPath)))
     }
 
     @objc private func addBookmark(_ sender: AnyObject?) {
-        let paths = targets().map(Self.displayPath)
+        let paths = clickedTargets().map(Self.displayPath)
         guard !paths.isEmpty, let data = Self.encodePaths(paths) else {
             NSSound.beep()
             return
@@ -197,6 +221,21 @@ final class FinderSync: FIFinderSync {
         return path
     }
 
+    /// The item the user acted on. `selectedItemURLs()` can still report an
+    /// older selection — Finder does not always re-select before building the
+    /// menu — so a right-click on an item outside the selection would otherwise
+    /// operate on the previously selected file. The right-clicked item wins; a
+    /// multi-selection it belongs to is kept as a selection.
+    private func clickedTargets() -> [URL] {
+        let controller = FIFinderSyncController.default()
+        let selected = controller.selectedItemURLs() ?? []
+
+        guard let targeted = controller.targetedURL() else { return selected }
+        if selected.isEmpty { return [targeted] }
+        if selected.contains(targeted) { return selected }
+        return [targeted]
+    }
+
     private func targets() -> [URL] {
         let controller = FIFinderSyncController.default()
 
@@ -212,7 +251,7 @@ final class FinderSync: FIFinderSync {
     override var toolbarItemName: String { L("Alt Right") }
     override var toolbarItemToolTip: String { L("Alt Right actions") }
     override var toolbarItemImage: NSImage {
-        NSImage(systemSymbolName: "cursorarrow.click.2", accessibilityDescription: nil)
+        NSImage(systemSymbolName: altRightIconName, accessibilityDescription: nil)
             ?? NSImage(size: NSSize(width: 18, height: 18))
     }
 }

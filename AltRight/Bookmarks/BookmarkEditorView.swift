@@ -12,6 +12,7 @@ struct BookmarkEditorView: View {
     @State private var title: String
     @State private var description: String
     @State private var errorMessage: String?
+    @FocusState private var pathFocused: Bool
 
     init(
         store: BookmarkStore,
@@ -35,68 +36,135 @@ struct BookmarkEditorView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(existing == nil ? L("Add Bookmark") : L("Edit Bookmark"))
-                .font(.system(size: 18, weight: .semibold))
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(L("Path or URL"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                TextField(L("Path or URL"), text: $path)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(L("Title"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                TextField(L("Title"), text: $title)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(L("Description"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                TextEditor(text: $description)
-                    .font(.body)
-                    .frame(height: 78)
-                    .padding(4)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
-                    )
-            }
-
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            HStack {
-                Spacer()
-                Button(L("Cancel")) {
-                    onCancel()
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Button(L("Save")) {
-                    save()
-                }
-                .keyboardShortcut(.defaultAction)
-            }
+        VStack(spacing: 0) {
+            content
+            Divider()
+            footer
         }
-        .padding(22)
         .frame(width: 470)
+        .onAppear {
+            pathFocused = existing == nil
+        }
         .onChange(of: path) { newValue in
             guard existing == nil else { return }
             if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 title = Bookmark.automaticTitle(for: newValue)
             }
         }
+    }
+
+    /// Left-aligned like the search and history windows: label above the field,
+    /// fields flush with the 16 pt gutter, nothing centred or boxed off.
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            labelled(L("Path or URL")) {
+                TextField(L("Path or URL"), text: $path)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12, design: .monospaced))
+                    .labelsHidden()
+                    .focused($pathFocused)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .strokeBorder(
+                                errorMessage == nil ? Color.clear : Color.red,
+                                lineWidth: 1
+                            )
+                    )
+            }
+
+            labelled(L("Title")) {
+                TextField(L("Title"), text: $title)
+                    .textFieldStyle(.roundedBorder)
+                    .labelsHidden()
+            }
+
+            labelled(L("Description")) {
+                TextEditor(text: $description)
+                    .font(.system(size: 12))
+                    .scrollContentBackground(.hidden)
+                    .padding(4)
+                    .frame(height: 72)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(Color(nsColor: .textBackgroundColor))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1)
+                    )
+            }
+
+            status
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func labelled<Content: View>(
+        _ name: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(name)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            content()
+        }
+    }
+
+    @ViewBuilder
+    private var status: some View {
+        if let errorMessage {
+            Text(errorMessage)
+                .font(.caption)
+                .foregroundStyle(.red)
+                .fixedSize(horizontal: false, vertical: true)
+        } else if !path.isEmpty {
+            Text(preview)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Where the bookmark points, in the user's words, before saving.
+    private var preview: String {
+        guard let normalized = Bookmark.normalizedPath(path) else {
+            return L("Enter an absolute path, a file URL, an SMB URL, or an HTTP(S) URL.")
+        }
+        var isDirectory: ObjCBool = false
+        let exists = FileManager.default.fileExists(
+            atPath: normalized,
+            isDirectory: &isDirectory
+        )
+        if normalized.lowercased().hasPrefix("http") {
+            return String(format: L("Opens in your browser: %@"), normalized)
+        }
+        if !exists {
+            return String(format: L("Not on disk right now: %@"), normalized)
+        }
+        return isDirectory.boolValue
+            ? String(format: L("Opens the folder: %@"), normalized)
+            : String(format: L("Reveals the file: %@"), normalized)
+    }
+
+    private var footer: some View {
+        HStack(spacing: 8) {
+            Spacer(minLength: 0)
+
+            Button(L("Cancel")) {
+                onCancel()
+            }
+            .keyboardShortcut(.cancelAction)
+
+            Button(existing == nil ? L("Add Bookmark") : L("Save")) {
+                save()
+            }
+            .keyboardShortcut(.defaultAction)
+            .buttonStyle(.borderedProminent)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     private func save() {

@@ -32,6 +32,14 @@ xcodebuild -project AltRight.xcodeproj -scheme AltRight -configuration "$CONFIG"
     -derivedDataPath "$BUILD_DIR" \
     CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$SIGN_IDENTITY" build >/dev/null
 
+# The app is English only, but a build directory reused from before that decision
+# keeps empty <lang>.lproj folders around (Xcode refreshes the directories, it
+# does not delete resources that left the project). Nothing in them is loaded —
+# an empty .lproj just advertises a localization the bundle does not have — but
+# they make the bundle lie, so strip them from the product we are about to copy.
+find "$BUILD_PRODUCT/Contents/Resources" -maxdepth 1 -name '*.lproj' \
+    ! -name 'en.lproj' -exec rm -rf {} + 2>/dev/null || true
+
 # Forget every other copy of the app (Xcode's build product, old installs, …).
 while IFS= read -r plugin_path; do
     case "$plugin_path" in

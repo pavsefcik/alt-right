@@ -61,24 +61,25 @@ struct ContentView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.accentColor.opacity(0.9), Color.accentColor.opacity(0.55)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                Image(systemName: "cursorarrow.click.2")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 52, height: 52)
+            // One mark for the whole app: an arrow pointing up and to the right,
+            // nothing around it. Same glyph as the menu bar and the app icon.
+            Image(systemName: "arrow.up.right")
+                .font(.system(size: 30, weight: .bold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 52, height: 52)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Alt Right")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("Alt Right")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+
+                    if !AppInfo.version.isEmpty {
+                        Text(AppInfo.version)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                            .textSelection(.enabled)
+                    }
+                }
                 Text(L("Copy paths, jump to paths, and connect to servers — straight from Finder’s context menu."))
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -92,7 +93,9 @@ struct ContentView: View {
             HStack(spacing: 10) {
                 Image(systemName: "bookmark")
                     .foregroundStyle(.secondary)
-                Text(String(format: L("%d bookmarks"), bookmarks.bookmarks.count))
+                Text(bookmarks.bookmarks.count == 1
+                     ? String(format: L("%d bookmark"), 1)
+                     : String(format: L("%d bookmarks"), bookmarks.bookmarks.count))
                     .font(.system(size: 13, weight: .medium))
                 Spacer(minLength: 0)
                 Button(L("Search Bookmarks…")) {
@@ -104,33 +107,13 @@ struct ContentView: View {
             HStack(spacing: 10) {
                 Image(systemName: "clock.arrow.circlepath")
                     .foregroundStyle(.secondary)
-                Text(String(format: L("%d copied paths"), history.entries.count))
+                Text(history.entries.count == 1
+                     ? String(format: L("%d copied path"), 1)
+                     : String(format: L("%d copied paths"), history.entries.count))
                     .font(.system(size: 13, weight: .medium))
                 Spacer(minLength: 0)
                 Button(L("History")) {
                     BookmarkCoordinator.shared.showHistory()
-                }
-                .controlSize(.small)
-            }
-
-            Divider()
-
-            HStack(spacing: 8) {
-                Button(L("Open Data Folder")) {
-                    NSWorkspace.shared.open(bookmarks.dataFolderURL)
-                }
-                .controlSize(.small)
-
-                Button(L("Reveal Data File")) {
-                    NSWorkspace.shared.activateFileViewerSelecting([bookmarks.fileURL])
-                }
-                .controlSize(.small)
-
-                Spacer(minLength: 0)
-
-                Button(L("Reload")) {
-                    bookmarks.load()
-                    history.load()
                 }
                 .controlSize(.small)
             }

@@ -34,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // would swallow our events, so claim the URL events again once it's done.
         installURLEventHandler()
         BookmarkCoordinator.shared.start()
+        PasteboardWatcher.shared.start()
         StatusModel.shared.start()
     }
 
@@ -94,7 +95,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleBookmarkCommand(_ command: BookmarkCommand, url: URL) {
         switch command {
         case .searchBookmarks:
+            if let paths = paths(from: url) {
+                BookmarkCoordinator.shared.rememberLastPath(paths)
+            }
             BookmarkCoordinator.shared.showSearch()
+
+        case .openHistory:
+            if let paths = paths(from: url) {
+                BookmarkCoordinator.shared.rememberLastPath(paths)
+            }
+            BookmarkCoordinator.shared.showHistory()
 
         case .recordHistory:
             if let paths = paths(from: url) {
@@ -122,6 +132,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 enum BookmarkCommand: String {
     case addBookmark = "add-bookmark"
+    case openHistory = "open-history"
     case searchBookmarks = "search-bookmarks"
     case recordHistory = "record-history"
 }

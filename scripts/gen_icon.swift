@@ -1,6 +1,6 @@
 #!/usr/bin/env swift
-// Renders the app icon: the same blue gradient tile and “cursor click” symbol the
-// app uses in its settings window and in Finder, so there is only one icon design.
+// Renders the app icon: a single arrow pointing up and to the right — the same
+// mark the app uses in its settings window, the menu bar and Finder. No tile.
 //
 // usage:
 //   swift scripts/gen_icon.swift icon.png     # preview PNG
@@ -8,14 +8,17 @@
 import AppKit
 
 let side: CGFloat = 1024
-let inset: CGFloat = 84          // macOS icon grid padding
-let radius: CGFloat = 200
 
-// MARK: - Tile with the SF Symbol
+let gradient = NSGradient(colors: [
+    NSColor(srgbRed: 0.36, green: 0.55, blue: 1.00, alpha: 1),
+    NSColor(srgbRed: 0.13, green: 0.29, blue: 0.82, alpha: 1),
+])!
+
+// MARK: - The arrow
 
 func makeSymbolImage() -> NSImage? {
-    let configuration = NSImage.SymbolConfiguration(pointSize: 520, weight: .semibold)
-    guard let symbol = NSImage(systemSymbolName: "cursorarrow.click.2", accessibilityDescription: nil)?
+    let configuration = NSImage.SymbolConfiguration(pointSize: 700, weight: .bold)
+    guard let symbol = NSImage(systemSymbolName: "arrow.up.right", accessibilityDescription: nil)?
         .withSymbolConfiguration(configuration)
     else { return nil }
 
@@ -23,9 +26,9 @@ func makeSymbolImage() -> NSImage? {
     let image = NSImage(size: size)
     image.lockFocus()
     symbol.draw(in: NSRect(origin: .zero, size: size))
-    // Tint the symbol white without touching anything transparent.
-    NSColor.white.setFill()
-    NSRect(origin: .zero, size: size).fill(using: .sourceAtop)
+    // Colour the glyph and nothing else: the icon stays transparent around it.
+    NSGraphicsContext.current?.cgContext.setBlendMode(.sourceAtop)
+    gradient.draw(in: NSRect(origin: .zero, size: size), angle: -90)
     image.unlockFocus()
     return image
 }
@@ -33,15 +36,6 @@ func makeSymbolImage() -> NSImage? {
 func makeIcon() -> NSImage {
     let image = NSImage(size: NSSize(width: side, height: side))
     image.lockFocus()
-
-    let tile = NSRect(x: inset, y: inset, width: side - inset * 2, height: side - inset * 2)
-    let tilePath = NSBezierPath(roundedRect: tile, xRadius: radius, yRadius: radius)
-
-    let gradient = NSGradient(colors: [
-        NSColor(srgbRed: 0.36, green: 0.55, blue: 1.00, alpha: 1),
-        NSColor(srgbRed: 0.13, green: 0.29, blue: 0.82, alpha: 1),
-    ])!
-    gradient.draw(in: tilePath, angle: -90)
 
     if let symbol = makeSymbolImage() {
         let symbolSize = symbol.size

@@ -11,10 +11,10 @@ submenu and the menu-bar icon:
 | **Connect to Server** | `⌘K` — opens Finder's *Connect to Server* dialog |
 | **Search Bookmarks** | fuzzy-search saved folders, files and URLs |
 | **Add Bookmark** | saves the Finder selection, or a manual path/URL |
-| **History** | every path copied by Alt Right, ready to copy or open again |
+| **History** | every path you copy, ready to copy, open, or turn into a bookmark |
 
 Right-click a file or folder in Finder → **Alt Right** offers **Copy Path**, **Paste Path**,
-**Search Bookmarks** and **Add Bookmark**. **History**, **Go to Folder** and
+**Search Bookmarks**, **Add Bookmark** and **History**. **Go to Folder** and
 **Connect to Server** live in the menu-bar menu, next to their shortcuts.
 
 **Paste Path** never navigates by itself: it fills in Finder's *Go to Folder* sheet and
@@ -32,12 +32,26 @@ Select one or more entries and use **Open**, **Edit** or **Delete**; double-clic
 opens it. Files are revealed in Finder, folders open in Finder, and URLs open in your
 default browser.
 
-**Add Bookmark** opens an editor pre-filled from the clipboard when it contains a path or
-URL. From Finder, selecting several items and choosing **Add Bookmark** adds them in one
-go, using each item's filename as its title. Already-saved paths are skipped.
+**Add Bookmark** opens an editor pre-filled with the path of the folder or file you last
+clicked in Finder — which is also what the menu bar's **Add Bookmark…** uses, since it has
+no Finder context of its own (the clipboard is only the fallback when nothing was clicked
+yet). From Finder, selecting several items and choosing **Add Bookmark** adds them in one
+go, using each item's filename as its title. Already-saved paths are skipped, and the item
+you actually right-clicked wins over a stale selection.
 
-**History** records paths copied through Alt Right's **Copy Path**, both from the Finder
-submenu and the menu bar. Entries can be copied, opened, removed, or cleared.
+**History** records *every* path you copy: Alt Right's **Copy Path** (Finder submenu and
+menu bar), Finder's own **⌥⌘C** (*Copy as Pathname*), and any absolute path copied from
+another app. There is no pasteboard notification on macOS, so the app polls the clipboard
+about once a second and only accepts a clipboard whose every line is a path or URL — prose
+and code are ignored. Entries can be filtered, copied, opened, removed, or cleared, and
+the **Add** button turns the selected path — or the whole selection — into bookmarks
+without leaving the window.
+
+In **Search Bookmarks** and **History**, double-click a row or press Return to open the
+selection; ⌘F puts the cursor in the filter field, ⌘O opens, and Esc closes the window.
+
+All three windows are summoned, not documents: they open on the desktop/Space you are on
+right now, float above the Finder, and go away when you click somewhere else or press Esc.
 
 Bookmarks live at `~/Library/Application Support/Alt Right/bookmarks.json`; copied-path
 history lives next to it in `history.json`. Both are plain JSON and stay on your Mac.
@@ -103,17 +117,16 @@ Alt Right menu-bar icon ──▶ Alt Right.app: bookmarks, history, ⇧⌘G →
   each one has to be registered on its own — that is what made Alt Right missing on
   `/Volumes/p-server` and friends.
 
-## Localization
+## Language
 
-The menu items and the settings UI are localized into
-English, German, Spanish, French, Italian, Japanese, Korean, Dutch, Polish, Brazilian
-Portuguese, Russian, Turkish, Ukrainian and Simplified Chinese — and because the app posts
-raw key codes instead of looking for English menu titles, it keeps working no matter which
-keyboard layout or system language is active.
+The UI is **English only**, on every system language and every keyboard layout: a
+half-translated state was worse than no translation, and it made the two targets drift
+apart. Because the app posts raw key codes instead of looking for English menu titles, it
+keeps working regardless of the active layout or the OS language.
 
-`.lproj/Localizable.strings` files are generated from `scripts/gen_strings.py`
-(keys are the English text, so an untranslated string simply falls back to English). To add a
-language: add a dict there and run `python3 scripts/gen_strings.py`.
+`en.lproj/Localizable.strings` is generated from `scripts/gen_strings.py`. Keys *are* the
+English text (`L("Add Bookmark…")`), so a missing entry degrades to readable English rather
+than a raw key — there is nothing to fall back to and nothing that can break.
 
 ## Caveats
 

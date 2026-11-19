@@ -27,7 +27,7 @@ struct BookmarkSearchView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            searchBar
+            header
             Divider()
             content
             Divider()
@@ -44,6 +44,14 @@ struct BookmarkSearchView: View {
         .onChange(of: store.bookmarks) { _ in
             let existing = Set(store.bookmarks.map(\.path))
             selection = selection.filter { existing.contains($0) }
+        }
+        .onKeyPress(phases: .down) { press in
+            // ⌘F focuses the field even when the list has focus.
+            guard press.key == "f", press.modifiers.contains(.command) else {
+                return .ignored
+            }
+            searchFocused = true
+            return .handled
         }
         .alert(item: $alert) { message in
             Alert(
@@ -62,30 +70,22 @@ struct BookmarkSearchView: View {
         }
     }
 
-    private var searchBar: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
+    private var header: some View {
+        HStack(spacing: 12) {
+            SearchField(
+                placeholder: L("Search bookmarks"),
+                text: $query,
+                focus: $searchFocused,
+                onSubmit: openSelection
+            )
+            .frame(maxWidth: 360)
+
+            Spacer(minLength: 8)
+
+            Text(countLabel)
+                .font(.caption)
                 .foregroundStyle(.secondary)
-
-            TextField(L("Search bookmarks"), text: $query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 15))
-                .focused($searchFocused)
-                .onSubmit {
-                    openSelection()
-                }
-
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                    searchFocused = true
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help(L("Clear"))
-            }
+                .monospacedDigit()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -109,6 +109,11 @@ struct BookmarkSearchView: View {
                     BookmarkRow(bookmark: bookmark)
                         .tag(bookmark.id)
                         .contentShape(Rectangle())
+                        // Simultaneous: an exclusive tap gesture on a List row
+                        // eats the click the List needs for selection.
+                        .simultaneousGesture(
+                            TapGesture(count: 2).onEnded { open([bookmark]) }
+                        )
                         .contextMenu {
                             Button(L("Open")) {
                                 open([bookmark])
@@ -125,6 +130,12 @@ struct BookmarkSearchView: View {
                 }
             }
             .listStyle(.inset)
+            // Return opens the selection when the list — not the field — has
+            // focus. In the field, .onSubmit below does the same thing.
+            .onKeyPress(.return) {
+                openSelection()
+                return .handled
+            }
         }
     }
 
@@ -146,15 +157,14 @@ struct BookmarkSearchView: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
-            Text(countLabel)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Button {
+                BookmarkCoordinator.shared.presentNewBookmark()
+            } label: {
+                Label(L("Add"), systemImage: "plus")
+            }
+            .help(L("Add Bookmark"))
 
             Spacer(minLength: 12)
-
-            Button(L("Add")) {
-                BookmarkCoordinator.shared.presentNewBookmark()
-            }
 
             Button(L("Edit")) {
                 guard selectedBookmarks.count == 1, let bookmark = selectedBookmarks.first else {
@@ -163,30 +173,41 @@ struct BookmarkSearchView: View {
                 BookmarkCoordinator.shared.presentEditor(for: bookmark)
             }
             .disabled(selectedBookmarks.count != 1)
+            .help(L("Edit Bookmark"))
 
             Button(L("Delete")) {
                 deleteRequested = true
             }
             .disabled(selection.isEmpty)
+            .help(L("Delete"))
 
             Button(L("Open")) {
                 openSelection()
             }
+            .keyboardShortcut("o")
             .disabled(selection.isEmpty)
+            .help(L("Open (⌘O)"))
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .controlSize(.regular)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     private var countLabel: String {
         if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return String(format: L("%d bookmarks"), store.bookmarks.count)
+            return countText(store.bookmarks.count)
         }
         return String(
             format: L("%d of %d bookmarks"),
             filtered.count,
             store.bookmarks.count
         )
+    }
+
+    private func countText(_ count: Int) -> String {
+        count == 1
+            ? String(format: L("%d bookmark"), 1)
+            : String(format: L("%d bookmarks"), count)
     }
 
     private var deleteMessage: String {
@@ -246,24 +267,28 @@ private struct BookmarkRow: View {
     let bookmark: Bookmark
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(bookmark.title)
-                .font(.system(size: 13, weight: .semibold))
-                .lineLimit(1)
+        HStack(spacing: 10) {
+            IconTile(symbol: pathSymbol(bookmark.path))
 
-            if !bookmark.description.isEmpty {
-                Text(bookmark.description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(bookmark.title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+
+                if !bookmark.description.isEmpty {
+                    Text(bookmark.description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Text(bookmark.path)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.tertiary)
                     .lineLimit(1)
             }
-
-            Text(bookmark.path)
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
