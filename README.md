@@ -1,7 +1,7 @@
 # Alt Right
 
-A tiny macOS app that puts the Finder shortcuts you keep googling behind one right-click
-submenu and the menu-bar icon:
+A tiny macOS menu-bar app that puts the Finder shortcuts you keep googling behind one
+right-click submenu.
 
 | Command | What it does (the shortcut you'd normally press) |
 | --- | --- |
@@ -10,168 +10,87 @@ submenu and the menu-bar icon:
 | **Go to Folder** | `⇧⌘G` — opens Finder's *Go to Folder* sheet |
 | **Connect to Server** | `⌘K` — opens Finder's *Connect to Server* dialog |
 | **Search Bookmarks** | fuzzy-search saved folders, files and URLs |
-| **Add Bookmark** | saves the Finder selection, or a manual path/URL |
-| **History** | every path you copy, ready to copy, open, or turn into a bookmark |
+| **Add Bookmark** | saves the selection, or a manual path/URL |
+| **History** | every path you copy, ready to copy, open, or bookmark |
 
-Right-click a file or folder in Finder → **Alt Right** offers **Copy Path**, **Paste Path**,
-**Search Bookmarks**, **Add Bookmark** and **History**. **Go to Folder** and
-**Connect to Server** live in the menu-bar menu, next to their shortcuts.
+Right-click a file or folder → **Alt Right** gives you Copy Path, Paste Path, Search
+Bookmarks, Add Bookmark and History. **Go to Folder** and **Connect to Server** live in the
+menu-bar menu. *Paste Path* stops in *Go to Folder* instead of pressing Return, so you can
+check the destination first.
 
-**Paste Path** never navigates by itself: it fills in Finder's *Go to Folder* sheet and
-waits for you to confirm with Return.
+**iCloud Drive, Google Drive, Dropbox and friends never show third-party Finder menus** —
+that is an Apple limitation. Use the menu-bar icon there; the commands work the same way.
 
-In **iCloud Drive, Google Drive and other cloud folders** macOS does not show third-party
-Finder extension menus at all. Use the **Alt Right menu-bar icon** there; the commands work the same way.
-
-<img src="docs/context-menu.png" width="620" alt="Finder context menu with the Alt Right submenu">
+<img src="docs/settings.png" width="420" alt="The Alt Right info window">
 
 ## Bookmarks and History
 
-**Search Bookmarks** opens a search window. Type to filter by title, description or path.
-Select one or more entries and use **Open**, **Edit** or **Delete**; double-clicking a row
-opens it. Files are revealed in Finder, folders open in Finder, and URLs open in your
-default browser.
-
-**Add Bookmark** opens an editor pre-filled with the path of the folder or file you last
-clicked in Finder — which is also what the menu bar's **Add Bookmark…** uses, since it has
-no Finder context of its own (the clipboard is only the fallback when nothing was clicked
-yet). From Finder, selecting several items and choosing **Add Bookmark** adds them in one
-go, using each item's filename as its title. Already-saved paths are skipped, and the item
-you actually right-clicked wins over a stale selection.
-
-**History** records *every* path you copy: Alt Right's **Copy Path** (Finder submenu and
-menu bar), Finder's own **⌥⌘C** (*Copy as Pathname*), and any absolute path copied from
-another app. There is no pasteboard notification on macOS, so the app polls the clipboard
-about once a second and only accepts a clipboard whose every line is a path or URL — prose
-and code are ignored. Entries can be filtered, copied, opened, removed, or cleared, and
-the **Add** button turns the selected path — or the whole selection — into bookmarks
-without leaving the window.
-
-In **Search Bookmarks** and **History**, double-click a row or press Return to open the
-selection; ⌘F puts the cursor in the filter field, ⌘O opens, and Esc closes the window.
-
-All three windows are summoned, not documents: they open on the desktop/Space you are on
-right now, float above the Finder, and go away when you click somewhere else or press Esc.
-
-Bookmarks live at `~/Library/Application Support/Alt Right/bookmarks.json`; copied-path
-history lives next to it in `history.json`. Both are plain JSON and stay on your Mac.
+- **Search Bookmarks** — type to filter by title, description or path; **Open**, **Edit**,
+  **Delete**, or double-click a row. Newly added bookmarks appear at the top.
+- **Add Bookmark** — pre-filled with the last path you clicked in Finder or copied anywhere
+  (the item you actually right-clicked wins over Finder's stale selection). A multi-item
+  selection is added in one go, with file names as titles; existing paths are skipped.
+- **History** — records *every* path you copy: Alt Right's Copy Path, Finder's own `⌥⌘C`,
+  and any absolute path copied from another app. The clipboard is polled about once a
+  second and only accepted when every line is a path, so prose and code are ignored. Rows
+  can be filtered, copied, opened, removed or turned into bookmarks.
+- All three windows open on the desktop you are on, float over Finder, and close on Esc or
+  a click outside. Double-click or Return opens a row, `⌘F` focuses the filter, `⌘O` opens.
+- Data lives at `~/Library/Application Support/Alt Right/` (`bookmarks.json`,
+  `history.json`) — plain JSON, never uploaded anywhere.
 
 ## Install
 
 ```bash
-./scripts/install.sh              # builds Release, installs to /Applications, enables the extension
-CONFIG=Debug ./scripts/install.sh # if you want the debug build
+./scripts/install.sh              # Release: builds, installs to /Applications, enables the extension
+CONFIG=Debug ./scripts/install.sh # debug build
+./scripts/uninstall.sh            # removes the app and its extension registration
 ```
 
-Then:
-
-1. **Finder extension** — the script enables it, but if the submenu is missing, flip it on in
+1. **Finder extension** — enabled by the script; if the submenu is missing, flip it on in
    *System Settings › General › Login Items & Extensions › Finder Extensions*.
-2. **Accessibility** — needed so the app can press `⇧⌘G` and `⌘K` for you. Open **Alt Right**
-   from the menu-bar icon and press **Grant…** (the switch then has to be turned on by hand,
-   macOS does not allow apps to do it for you).
+2. **Accessibility** — needed so the app can press `⇧⌘G` and `⌘K`. Open **Alt Right** from the
+   menu bar and press **Grant…**, then turn the switch on by hand (macOS does not allow
+   apps to do that).
 
-Uninstall with `./scripts/uninstall.sh`.
-
-## Building in Xcode
-
-Open `AltRight.xcodeproj`, pick the `AltRight` scheme and Run. The project has two targets:
-
-- `AltRight` — the menu-bar app (`LSUIElement`), no dock icon, no window at launch.
-- `AltRightFinderSync` — the Finder Sync extension, embedded in `Contents/PlugIns`.
-
-Keep only **one** copy of the app registered with LaunchServices. If you both `Run` from Xcode
-and keep an `/Applications` copy around, macOS refuses to load the extension with
-*"An extension with the same bundle ID already exists with a different path"*.
-`scripts/install.sh` handles that by unregistering every other copy it finds.
+Keep only **one** copy of the app registered. Building from Xcode while an `/Applications`
+copy exists makes macOS refuse the extension: *"An extension with the same bundle ID already
+exists with a different path"*. `install.sh` unregisters every other copy it finds.
 
 ## How it works
 
 ```
-Finder ──right-click──▶ AltRightFinderSync.appex  (sandboxed, local disks + mounted volumes)
-                            │  Copy Path: NSPasteboard, done right here
-                            │  Add Bookmark: sends the selected paths to the app
-                            │
-                            ├─ altright://paste-path        ──▶  Alt Right.app (unsandboxed helper)
-                            ├─ altright://add-bookmark      ──▶  bookmark editor / batch add
-                            ├─ altright://search-bookmarks  ──▶  bookmark search window
-                            └─ altright://record-history    ──▶  copied-path history
-
-Alt Right menu-bar icon ──▶ Alt Right.app: bookmarks, history, ⇧⌘G → ⌘V / ⇧⌘G / ⌘K (works everywhere)
+Finder ─right-click─▶ AltRightFinderSync.appex (sandboxed)
+                          ├─ Copy Path: writes the pasteboard itself
+                          └─ altright://add-bookmark | search-bookmarks | open-history | paste-path
+                                     ▼
+                         Alt Right.app (unsandboxed helper)
 ```
 
-- A sandboxed app extension can't post keyboard events and has no access to the app's
-  Application Support files, so the extension delegates *Paste Path*, bookmark actions and
-  history recording to the containing app over a private URL scheme.
-- The app re-registers its `kAEGetURL` handler in `applicationDidFinishLaunching`, because
-  SwiftUI installs its own handler while starting up and would otherwise swallow the event.
-- Without Accessibility permission none of the commands can drive Finder, so the app
-  explains that and offers to open the settings pane.
-- *Paste Path* stops after pasting into *Go to Folder*; it does not press Return, so you
-  can check or edit the destination first.
-- **File Provider locations** (iCloud Drive, Google Drive, Dropbox, OneDrive, …) never show
-  third-party Finder Sync menus; that is an Apple limitation. Use the menu-bar icon there.
-- The extension monitors `/`, the home folder and every mounted volume, and refreshes that
-  list whenever a drive is mounted or ejected. `/` alone is only the startup disk: Finder
-  treats every other volume (SMB shares, USB drives, disk images) as a separate root, so
-  each one has to be registered on its own — that is what made Alt Right missing on
-  `/Volumes/p-server` and friends.
-
-## Language
-
-The UI is **English only**, on every system language and every keyboard layout: a
-half-translated state was worse than no translation, and it made the two targets drift
-apart. Because the app posts raw key codes instead of looking for English menu titles, it
-keeps working regardless of the active layout or the OS language.
-
-`en.lproj/Localizable.strings` is generated from `scripts/gen_strings.py`. Keys *are* the
-English text (`L("Add Bookmark…")`), so a missing entry degrades to readable English rather
-than a raw key — there is nothing to fall back to and nothing that can break.
+A sandboxed extension cannot post keyboard events or read the app's Application Support
+files, so it hands those actions to the app over a private URL scheme. The app re-registers
+its `kAEGetURL` handler in `applicationDidFinishLaunching`, because SwiftUI installs its own
+handler at startup and would swallow the events. The extension monitors `/`, the home
+folder and every mounted volume (Finder treats each volume as a separate root), refreshing
+the list on mount and unmount.
 
 ## Caveats
 
-- Built ad-hoc signed (`Sign to Run Locally`) — fine on your own Mac, but shipping to other
-  people needs a Developer ID certificate, hardened runtime and notarization.
-- *Paste Path* pastes whatever text is on the clipboard, exactly like the real `⇧⌘G` — a
-  clipboard holding prose just makes Finder beep.
-- *Copy Path* copies one path per line for multi-selections, matching Finder's own behavior.
-- The extension also registers a Finder toolbar item ("Alt Right"), which only appears if you
-  add it with *View › Customize Toolbar…*.
-- Cloud folders (iCloud Drive, Google Drive, Dropbox, OneDrive, …) have no right-click
-  integration at all. macOS gives no API for it — registering the File Provider path with
-  `FIFinderSyncController` does not help either. Use the menu-bar icon instead.
-- Listing a volume makes Finder show the Alt Right icon for it in the sidebar. That is
-  Finder's own behavior for volumes a Finder extension is active on.
+- Self-signed with a local identity — fine on your own Mac; shipping it needs a Developer ID
+  certificate, hardened runtime and notarization.
+- *Paste Path* pastes whatever is on the clipboard, like the real `⇧⌘G`; prose just beeps.
+- Listing a volume makes Finder show the Alt Right icon for it in the sidebar — Finder's own
+  behaviour for extension-enabled volumes.
+- A *View › Customize Toolbar…* item ("Alt Right") is also registered.
+- The UI is English only: `en.lproj` is generated by `scripts/gen_strings.py` from the
+  `L("…")` keys in the sources.
 
-## Project layout
+## Layout
 
 ```
-AltRight/                      menu-bar app
-  AltRightApp.swift            MenuBarExtra scene
-  AppIcon.icns                 generated by scripts/gen_icon.swift
-  AppDelegate.swift            URL-scheme handling, settings window
-  ContentView.swift            settings UI + status model + menu bar
-  FinderActuator.swift         the ⇧⌘G / ⌘K keystrokes + clipboard fallback
-  Permissions.swift            Accessibility + settings deep links
-  Support.swift                pluginkit status, Finder restart
-  Bookmarks/
-    Bookmark.swift             model + path normalization
-    BookmarkStore.swift        bookmarks.json load/save
-    FuzzyMatcher.swift         search filtering
-    BookmarkOpener.swift       open/reveal/missing-path handling
-    BookmarkSearchView.swift   search window
-    BookmarkEditorView.swift   add/edit form
-    HistoryStore.swift         history.json load/save
-    HistoryView.swift          copied-path history window
-    BookmarkCoordinator.swift  windows + Finder handoff routing
-    BookmarkWindows.swift      AppKit window controllers
-    PathPayload.swift          URL payload encoding
-  *.lproj/Localizable.strings  generated strings
-AltRightFinderSync/            Finder Sync extension
-  FinderSync.swift             FIFinderSync subclass: submenu + Finder handoff
-  *.lproj/Localizable.strings  generated strings
-scripts/
-  install.sh, uninstall.sh
-  gen_strings.py               regenerates the .strings files
-  gen_icon.swift               regenerates the app icon
+AltRight/                  menu-bar app (LSUIElement): settings UI, key actuation, windows
+  Bookmarks/               stores, search/history/editor windows, URL payloads
+  AppIcon.icns             generated by scripts/gen_icon.swift
+AltRightFinderSync/        Finder Sync extension: submenu + handoff
+scripts/                   install.sh, uninstall.sh, gen_strings.py, gen_icon.swift
 ```
