@@ -132,3 +132,7 @@ AltRight/                  menu-bar app (LSUIElement): settings UI, key actuatio
 AltRightFinderSync/        Finder Sync extension: submenu + handoff
 scripts/                   install.sh, uninstall.sh, gen_strings.py, gen_icon.swift
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
