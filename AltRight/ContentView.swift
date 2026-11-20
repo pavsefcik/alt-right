@@ -1,3 +1,4 @@
+import Carbon.HIToolbox
 import SwiftUI
 
 @MainActor
@@ -43,11 +44,13 @@ struct ContentView: View {
     @ObservedObject private var status = StatusModel.shared
     @ObservedObject private var bookmarks = BookmarkStore.shared
     @ObservedObject private var history = HistoryStore.shared
+    @ObservedObject private var shortcuts = ShortcutStore.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             header
             setupCard
+            shortcutsCard
             bookmarksCard
         }
         .padding(24)
@@ -56,6 +59,7 @@ struct ContentView: View {
         .onAppear {
             status.refresh()
             status.start()
+            shortcuts.load()
         }
     }
 
@@ -124,6 +128,37 @@ struct ContentView: View {
         }
     }
 
+    private var shortcutsCard: some View {
+        Card(title: L("Shortcuts")) {
+            VStack(spacing: 10) {
+                ForEach(ShortcutAction.allCases, id: \.self) { action in
+                    ShortcutRow(action: action, store: shortcuts)
+                }
+
+                if let conflict = shortcuts.conflict {
+                    Text(conflict)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                HStack(spacing: 8) {
+                    Text(L("Click a shortcut and press the new key combination."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer(minLength: 8)
+
+                    Button(L("Restore Defaults")) {
+                        shortcuts.reset()
+                    }
+                    .controlSize(.small)
+                }
+            }
+        }
+    }
+
     private var setupCard: some View {
         Card(title: L("Setup")) {
             StatusRow(
@@ -160,6 +195,82 @@ struct ContentView: View {
                 .controlSize(.small)
             }
         }
+    }
+}
+
+private struct ShortcutRow: View {
+    let action: ShortcutAction
+    @ObservedObject var store: ShortcutStore
+
+    @State private var recording = false
+    @State private var monitor: Any?
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
+
+            Text(action.title)
+                .font(.system(size: 13, weight: .medium))
+
+            Spacer(minLength: 8)
+
+            Button {
+                recording ? stopRecording() : startRecording()
+            } label: {
+                Text(recording ? L("Press keys…") : store.settings[action].display)
+                    .font(.system(size: 12, design: .monospaced))
+                    .frame(minWidth: 92)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .tint(recording ? .accentColor : nil)
+        }
+        .onDisappear {
+            stopRecording()
+        }
+    }
+
+    private var symbol: String {
+        switch action {
+        case .searchBookmarks: return "magnifyingglass"
+        case .addBookmark: return "bookmark"
+        case .history: return "clock.arrow.circlepath"
+        }
+    }
+
+    private func startRecording() {
+        stopRecording()
+        recording = true
+
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // Escape cancels without changing anything.
+            if event.keyCode == UInt16(kVK_Escape) {
+                stopRecording()
+                return nil
+            }
+
+            guard let shortcut = Shortcut(event: event) else {
+                NSSound.beep()
+                return nil
+            }
+
+            if store.set(shortcut, for: action) {
+                stopRecording()
+            } else {
+                NSSound.beep()
+            }
+            return nil
+        }
+    }
+
+    private func stopRecording() {
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        monitor = nil
+        recording = false
     }
 }
 
@@ -217,18 +328,28 @@ private struct StatusRow: View {
 }
 
 struct MenuBarView: View {
+    @ObservedObject private var shortcuts = ShortcutStore.shared
+
     var body: some View {
-        Button(L("Search Bookmarks…")) {
+        Button(L("Search Bookmarks")) {
             DispatchQueue.main.async {
                 BookmarkCoordinator.shared.showSearch()
             }
         }
+        .keyboardShortcut(
+            shortcuts.settings.searchBookmarks.swiftUIKey,
+            modifiers: shortcuts.settings.searchBookmarks.swiftUIModifiers
+        )
 
-        Button(L("Add Bookmark…")) {
+        Button(L("Add Bookmark")) {
             DispatchQueue.main.async {
-                BookmarkCoordinator.shared.presentNewBookmark()
+                BookmarkCoordinator.shared.presentNewBookmark(useFinderSelection: true)
             }
         }
+        .keyboardShortcut(
+            shortcuts.settings.addBookmark.swiftUIKey,
+            modifiers: shortcuts.settings.addBookmark.swiftUIModifiers
+        )
 
         Divider()
 
@@ -244,16 +365,20 @@ struct MenuBarView: View {
                 BookmarkCoordinator.shared.showHistory()
             }
         }
+        .keyboardShortcut(
+            shortcuts.settings.history.swiftUIKey,
+            modifiers: shortcuts.settings.history.swiftUIModifiers
+        )
 
-        Button(L("Go to Folder") + "…") { run(.goToFolder) }
+        Button(L("Go to Folder")) { run(.goToFolder) }
             .keyboardShortcut("g", modifiers: [.command, .shift])
 
-        Button(L("Connect to Server") + "…") { run(.connectToServer) }
+        Button(L("Connect to Server")) { run(.connectToServer) }
             .keyboardShortcut("k", modifiers: .command)
 
         Divider()
 
-        Button(L("Open Alt Right…")) {
+        Button(L("Open Alt Right")) {
             // Let the menu-bar menu close before presenting the settings window.
             DispatchQueue.main.async {
                 AppDelegate.shared?.showSettings()

@@ -16,6 +16,7 @@ final class FinderSync: FIFinderSync {
     override init() {
         super.init()
 
+        ShortcutConfig.startObservingChanges()
         updateMonitoredDirectories()
 
         // Drives come and go while Finder is running (SMB shares, USB sticks, disk
@@ -74,12 +75,14 @@ final class FinderSync: FIFinderSync {
         let submenu = NSMenu(title: title)
         submenu.autoenablesItems = false
 
+        let shortcuts = ShortcutConfig.load()
+
         addCopyPath(to: submenu)
         addPastePath(to: submenu)
         submenu.addItem(.separator())
-        addSearchBookmarks(to: submenu)
-        addAddBookmark(to: submenu)
-        addHistory(to: submenu)
+        addSearchBookmarks(to: submenu, shortcut: shortcuts.searchBookmarks)
+        addAddBookmark(to: submenu, shortcut: shortcuts.addBookmark)
+        addHistory(to: submenu, shortcut: shortcuts.history)
 
         item.submenu = submenu
         root.addItem(item)
@@ -108,37 +111,40 @@ final class FinderSync: FIFinderSync {
         menu.addItem(paste)
     }
 
-    private func addSearchBookmarks(to menu: NSMenu) {
+    private func addSearchBookmarks(to menu: NSMenu, shortcut: Shortcut) {
         let item = NSMenuItem(
-            title: L("Search Bookmarks…"),
+            title: L("Search Bookmarks"),
             action: #selector(searchBookmarks(_:)),
-            keyEquivalent: ""
+            keyEquivalent: shortcut.key.lowercased()
         )
         item.target = self
+        item.keyEquivalentModifierMask = shortcut.eventModifiers
         item.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil)
         menu.addItem(item)
     }
 
-    private func addAddBookmark(to menu: NSMenu) {
+    private func addAddBookmark(to menu: NSMenu, shortcut: Shortcut) {
         let item = NSMenuItem(
-            title: L("Add Bookmark…"),
+            title: L("Add Bookmark"),
             action: #selector(addBookmark(_:)),
-            keyEquivalent: ""
+            keyEquivalent: shortcut.key.lowercased()
         )
         item.target = self
+        item.keyEquivalentModifierMask = shortcut.eventModifiers
         // "bookmark.badge.plus" does not exist as an SF Symbol, so this item
         // silently had no icon at all.
         item.image = NSImage(systemSymbolName: "bookmark", accessibilityDescription: nil)
         menu.addItem(item)
     }
 
-    private func addHistory(to menu: NSMenu) {
+    private func addHistory(to menu: NSMenu, shortcut: Shortcut) {
         let item = NSMenuItem(
             title: L("History"),
             action: #selector(openHistory(_:)),
-            keyEquivalent: ""
+            keyEquivalent: shortcut.key.lowercased()
         )
         item.target = self
+        item.keyEquivalentModifierMask = shortcut.eventModifiers
         item.image = NSImage(systemSymbolName: "clock.arrow.circlepath", accessibilityDescription: nil)
         menu.addItem(item)
     }

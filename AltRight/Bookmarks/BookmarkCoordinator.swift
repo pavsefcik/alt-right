@@ -44,11 +44,25 @@ final class BookmarkCoordinator {
         historyWindow.show()
     }
 
-    func presentNewBookmark(initialPath: String = "") {
+    func presentNewBookmark(initialPath: String = "", useFinderSelection: Bool = false) {
         let path = initialPath.isEmpty
-            ? (lastPickedPath ?? clipboardPath() ?? "")
+            ? preferredNewBookmarkPath(useFinderSelection: useFinderSelection)
             : initialPath
         editorWindow.present(existing: nil, initialPath: path)
+    }
+
+    /// What the editor should start with when no path was handed over.
+    ///
+    /// The menu-bar item and the Add Bookmark hot key first ask Finder what is
+    /// selected right now; that is the folder or file the user just chose. The
+    /// “+” button inside the bookmarks window is an in-app action, so it keeps
+    /// using the last path Alt Right saw and then the clipboard.
+    private func preferredNewBookmarkPath(useFinderSelection: Bool) -> String {
+        if useFinderSelection, let selected = FinderSelection.selectedPaths().first {
+            rememberLastPath([selected])
+            return selected
+        }
+        return lastPickedPath ?? clipboardPath() ?? ""
     }
 
     func presentEditor(for bookmark: Bookmark) {
@@ -215,5 +229,48 @@ final class PasteboardWatcher {
         guard normalized.count == lines.count else { return }
 
         BookmarkCoordinator.shared.recordHistory(paths: normalized)
+    }
+}
+
+// MARK: - Finder selection
+
+/// Reads the selection of Finder's front window. This is what “Add Bookmark”
+/// prefills when it is invoked from the menu bar or its hot key, so the item the
+/// user just clicked in Finder is the one that gets saved.
+@MainActor
+enum FinderSelection {
+    static func selectedPaths() -> [String] {
+        let source = """
+        tell application "Finder"
+            set thePaths to {}
+            repeat with anItem in (selection as alias list)
+                set end of thePaths to POSIX path of anItem
+            end repeat
+            return thePaths
+        end tell
+        """
+
+        guard let script = NSAppleScript(source: source) else { return [] }
+
+        var error: NSDictionary?
+        let result = script.executeAndReturnError(&error)
+
+        if let error {
+            // -1743: Automation not allowed. -1728: no selection or window.
+            // Neither is worth an alert; the editor falls back to the last
+            // known path.
+            AppDelegate.log("Finder selection unavailable: \(error)")
+            return []
+        }
+
+        guard result.numberOfItems > 0 else { return [] }
+
+        var paths: [String] = []
+        for index in 1...result.numberOfItems {
+            if let value = result.atIndex(index)?.stringValue {
+                paths.append(value)
+            }
+        }
+        return paths.compactMap(Bookmark.normalizedPath)
     }
 }

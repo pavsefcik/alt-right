@@ -171,6 +171,18 @@ final class HistoryWindowController: NSWindowController, NSWindowDelegate {
 
 /// Shared "lost focus → go away" rule.
 enum SummonedDismissal {
+    /// Open modal panels (the file browser) make the summoned window resign
+    /// key. That is not the user leaving, so dismissal is paused meanwhile.
+    private static var modalDepth = 0
+
+    static func noteModalStart() {
+        modalDepth += 1
+    }
+
+    static func noteModalEnd() {
+        modalDepth = max(0, modalDepth - 1)
+    }
+
     /// Focus leaving the window means one of two different things:
     ///
     /// * the user went somewhere else (another app, the desktop) — the window
@@ -183,6 +195,7 @@ enum SummonedDismissal {
     /// that guard, confirming "Delete bookmarks?" would order the list out from
     /// under its own dialog.
     static func dismissIfUnused(_ window: NSWindow?) {
+        guard modalDepth == 0, NSApp.modalWindow == nil else { return }
         guard let window, window.isVisible else { return }
         guard window.attachedSheet == nil else { return }
 

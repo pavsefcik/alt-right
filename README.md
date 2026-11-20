@@ -9,9 +9,9 @@ right-click submenu.
 | **Paste Path** | opens Finder's *Go to Folder* sheet and pastes the clipboard path |
 | **Go to Folder** | `⇧⌘G` — opens Finder's *Go to Folder* sheet |
 | **Connect to Server** | `⌘K` — opens Finder's *Connect to Server* dialog |
-| **Search Bookmarks** | fuzzy-search saved folders, files and URLs |
-| **Add Bookmark** | saves the selection, or a manual path/URL |
-| **History** | every path you copy, ready to copy, open, or bookmark |
+| **Search Bookmarks** | `⌥⌘B` — fuzzy-search saved folders, files and URLs |
+| **Add Bookmark** | `⇧⌥⌘B` — saves the Finder selection, or a manual path/URL |
+| **History** | `⌃⌘H` — every path you copy, ready to copy, open, or bookmark |
 
 Right-click a file or folder → **Alt Right** gives you Copy Path, Paste Path, Search
 Bookmarks, Add Bookmark and History. **Go to Folder** and **Connect to Server** live in the
@@ -27,15 +27,26 @@ that is an Apple limitation. Use the menu-bar icon there; the commands work the 
 
 - **Search Bookmarks** — type to filter by title, description or path; **Open**, **Edit**,
   **Delete**, or double-click a row. Newly added bookmarks appear at the top.
-- **Add Bookmark** — pre-filled with the last path you clicked in Finder or copied anywhere
-  (the item you actually right-clicked wins over Finder's stale selection). A multi-item
-  selection is added in one go, with file names as titles; existing paths are skipped.
+- **Edit** — correcting a stale path rewrites that bookmark in place (it does not leave the
+  old one behind). **Browse…** opens a file panel when pasting a path is not what you want.
+- **Add Bookmark** — pre-filled with the current Finder selection when invoked from the
+  menu bar or its hot key (falling back to the last path Alt Right saw, then the clipboard).
+  A multi-item Finder selection is added in one go, with file names as titles; existing
+  paths are skipped.
+- **Path input is forgiving** — quoted paths (`'…'`, `"…"`, curly quotes), a missing
+  opening or closing quote, shell-escaped spaces (`My\ Folder`), `~`, `file://` URLs, and
+  `smb://`/`afp://`/`cifs://`/`nfs://` URLs are all reduced to the local path they mean.
 - **History** — records *every* path you copy: Alt Right's Copy Path, Finder's own `⌥⌘C`,
   and any absolute path copied from another app. The clipboard is polled about once a
   second and only accepted when every line is a path, so prose and code are ignored. Rows
   can be filtered, copied, opened, removed or turned into bookmarks.
 - All three windows open on the desktop you are on, float over Finder, and close on Esc or
   a click outside. Double-click or Return opens a row, `⌘F` focuses the filter, `⌘O` opens.
+- The `⌥⌘B`, `⇧⌥⌘B` and `⌃⌘H` shortcuts are registered as system-wide hot keys, so they
+  work while Finder (or any other app) is frontmost — not just while a menu is open.
+- In **Open Alt Right → Shortcuts**, click a combination and press a new one. The change is
+  live immediately (global hot key, menu-bar menu, and the Finder submenu); **Restore
+  Defaults** brings the three combinations above back.
 - Data lives at `~/Library/Application Support/Alt Right/` (`bookmarks.json`,
   `history.json`) — plain JSON, never uploaded anywhere.
 

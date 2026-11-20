@@ -11,6 +11,7 @@
 "Cancel" = "Cancel";
 "Some Bookmarks Could Not Be Added" = "Some Bookmarks Could Not Be Added";
 "Path or URL" = "Path or URL";
+"Browse…" = "Browse…";
 "Title" = "Title";
 "Description" = "Description";
 "Enter an absolute path, a file URL, an SMB URL, or an HTTP(S) URL." = "Enter an absolute path, a file URL, an SMB URL, or an HTTP(S) URL.";
@@ -21,6 +22,8 @@
 "Add Bookmark" = "Add Bookmark";
 "Save" = "Save";
 "A bookmark for this path already exists." = "A bookmark for this path already exists.";
+"Choose" = "Choose";
+"Choose a folder or file to bookmark." = "Choose a folder or file to bookmark.";
 "Path Not Found" = "Path Not Found";
 "“%@” doesn’t exist." = "“%@” doesn’t exist.";
 "Edit Bookmark" = "Edit Bookmark";
@@ -60,6 +63,9 @@
 "Just now" = "Just now";
 "Copy paths, jump to paths, and connect to servers — straight from Finder’s context menu." = "Copy paths, jump to paths, and connect to servers — straight from Finder’s context menu.";
 "Search Bookmarks…" = "Search Bookmarks…";
+"Shortcuts" = "Shortcuts";
+"Click a shortcut and press the new key combination." = "Click a shortcut and press the new key combination.";
+"Restore Defaults" = "Restore Defaults";
 "Setup" = "Setup";
 "Finder Extension" = "Finder Extension";
 "Enabled" = "Enabled";
@@ -71,14 +77,16 @@
 "Grant…" = "Grant…";
 "Accessibility lets Alt Right press ⇧⌘G and ⌘K for you." = "Accessibility lets Alt Right press ⇧⌘G and ⌘K for you.";
 "Restart Finder" = "Restart Finder";
-"Add Bookmark…" = "Add Bookmark…";
+"Press keys…" = "Press keys…";
+"Search Bookmarks" = "Search Bookmarks";
 "Copy Path" = "Copy Path";
 "Paste Path" = "Paste Path";
 "Go to Folder" = "Go to Folder";
 "Connect to Server" = "Connect to Server";
-"Open Alt Right…" = "Open Alt Right…";
+"Open Alt Right" = "Open Alt Right";
 "Quit Alt Right" = "Quit Alt Right";
 "Accessibility Access Needed" = "Accessibility Access Needed";
 "Alt Right needs Accessibility access to press Finder shortcuts for you.\n\nOpen System Settings › Privacy & Security › Accessibility and enable Alt Right." = "Alt Right needs Accessibility access to press Finder shortcuts for you.\n\nOpen System Settings › Privacy & Security › Accessibility and enable Alt Right.";
 "Open System Settings" = "Open System Settings";
+"%@ already uses that shortcut." = "%@ already uses that shortcut.";
 "Clear" = "Clear";

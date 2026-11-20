@@ -34,8 +34,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // would swallow our events, so claim the URL events again once it's done.
         installURLEventHandler()
         BookmarkCoordinator.shared.start()
+        ShortcutStore.shared.load()
+        ShortcutConfig.startServingChanges()
         PasteboardWatcher.shared.start()
         StatusModel.shared.start()
+        GlobalHotKeys.shared.start()
     }
 
     /// The app is an accessory (LSUIElement), so its settings window is created and

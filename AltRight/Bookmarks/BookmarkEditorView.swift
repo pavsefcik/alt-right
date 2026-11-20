@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct BookmarkEditorView: View {
@@ -58,18 +59,27 @@ struct BookmarkEditorView: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 14) {
             labelled(L("Path or URL")) {
-                TextField(L("Path or URL"), text: $path)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12, design: .monospaced))
-                    .labelsHidden()
-                    .focused($pathFocused)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .strokeBorder(
-                                errorMessage == nil ? Color.clear : Color.red,
-                                lineWidth: 1
-                            )
-                    )
+                HStack(spacing: 8) {
+                    TextField(L("Path or URL"), text: $path)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                        .labelsHidden()
+                        .focused($pathFocused)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .strokeBorder(
+                                    errorMessage == nil ? Color.clear : Color.red,
+                                    lineWidth: 1
+                                )
+                        )
+
+                    // Pasting a path is fine, but finding the folder in the
+                    // first place is what the Finder is for.
+                    Button(L("Browse…")) {
+                        browse()
+                    }
+                    .controlSize(.regular)
+                }
             }
 
             labelled(L("Title")) {
@@ -193,10 +203,61 @@ struct BookmarkEditorView: View {
         )
 
         do {
-            _ = try store.upsert(bookmark)
+            if let existing {
+                // Rewrite the bookmark the editor was opened for; never leave
+                // the old path behind as a second entry.
+                try store.replace(originalPath: existing.path, with: bookmark)
+            } else {
+                _ = try store.upsert(bookmark)
+            }
             onSave(bookmark)
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// Opens the standard file panel and writes the choice straight into the
+    /// editor. It is app-modal rather than a sheet: a sheet would make the
+    /// summoned editor resign key, and the sheet completion runs outside the
+    /// view's update cycle. `SummonedDismissal` keeps the editor alive while
+    /// the panel is up.
+    private func browse() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = false
+        panel.resolvesAliases = true
+        panel.prompt = L("Choose")
+        panel.message = L("Choose a folder or file to bookmark.")
+
+        if let normalized = Bookmark.normalizedPath(path), normalized.hasPrefix("/") {
+            let url = URL(fileURLWithPath: normalized)
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: normalized, isDirectory: &isDirectory) {
+                panel.directoryURL = isDirectory.boolValue
+                    ? url
+                    : url.deletingLastPathComponent()
+            }
+        }
+
+        AppActivation.activate()
+        SummonedDismissal.noteModalStart()
+        let response = panel.runModal()
+        SummonedDismissal.noteModalEnd()
+
+        guard response == .OK, let url = panel.url else { return }
+
+        let chosen = url.path(percentEncoded: false)
+        let previousTitle = title
+        let previousPath = path
+        path = chosen
+        errorMessage = nil
+        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || previousTitle == Bookmark.automaticTitle(for: previousPath) {
+            title = Bookmark.automaticTitle(for: chosen)
+        }
+
+        AppDelegate.log("browse chose \(chosen)")
     }
 }

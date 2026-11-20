@@ -62,6 +62,21 @@ final class BookmarkStore: ObservableObject {
         return false
     }
 
+    /// Rewrites the entry stored at `originalPath` in place. Editing a bookmark
+    /// and correcting its path must update that bookmark, not add a second one
+    /// while the stale one stays behind.
+    func replace(originalPath: String, with bookmark: Bookmark) throws {
+        var updated = bookmarks
+
+        if let index = updated.firstIndex(where: { $0.path == originalPath }) {
+            updated[index] = bookmark
+            try save(updated)
+            bookmarks = updated
+        } else {
+            _ = try upsert(bookmark)
+        }
+    }
+
     func remove(paths: Set<String>) throws {
         guard !paths.isEmpty else { return }
         let updated = bookmarks.filter { !paths.contains($0.path) }

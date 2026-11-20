@@ -16,6 +16,10 @@
 		AA0000000000000000000012 /* Localized.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000011 /* Localized.swift */; };
 		AA0000000000000000000014 /* Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000013 /* Permissions.swift */; };
 		AA0000000000000000000016 /* Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000015 /* Support.swift */; };
+		AA00000000000000000000F4 /* GlobalHotKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F3 /* GlobalHotKeys.swift */; };
+		AA00000000000000000000F6 /* ShortcutConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F5 /* ShortcutConfig.swift */; };
+		AA00000000000000000000F7 /* ShortcutConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F5 /* ShortcutConfig.swift */; };
+		AA00000000000000000000F9 /* ShortcutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F8 /* ShortcutStore.swift */; };
 		AA0000000000000000000029 /* FinderSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000028 /* FinderSync.swift */; };
 		AA000000000000000000002B /* Localized.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002A /* Localized.swift */; };
 		AA0000000000000000000027 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000018 /* Localizable.strings */; };
@@ -62,6 +66,9 @@
 
 /* Begin PBXFileReference section */
 		AA00000000000000000000F2 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+		AA00000000000000000000F3 /* GlobalHotKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotKeys.swift; sourceTree = "<group>"; };
+		AA00000000000000000000F5 /* ShortcutConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutConfig.swift; sourceTree = "<group>"; };
+		AA00000000000000000000F8 /* ShortcutStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutStore.swift; sourceTree = "<group>"; };
 		AA0000000000000000000042 /* AltRight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AltRight.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000043 /* AltRightFinderSync.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AltRightFinderSync.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000007 /* AltRightApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AltRightApp.swift; sourceTree = "<group>"; };
@@ -135,6 +142,9 @@
 				AA0000000000000000000011 /* Localized.swift */,
 				AA0000000000000000000013 /* Permissions.swift */,
 				AA0000000000000000000015 /* Support.swift */,
+				AA00000000000000000000F3 /* GlobalHotKeys.swift */,
+				AA00000000000000000000F5 /* ShortcutConfig.swift */,
+				AA00000000000000000000F8 /* ShortcutStore.swift */,
 				BB00000000000000000000BC /* Bookmarks */,
 				AA0000000000000000000018 /* Localizable.strings */,
 				AA00000000000000000000F2 /* AppIcon.icns */,
@@ -300,6 +310,9 @@
 				AA0000000000000000000012,
 				AA0000000000000000000014,
 				AA0000000000000000000016,
+				AA00000000000000000000F4,
+				AA00000000000000000000F6,
+				AA00000000000000000000F9,
 				CC0000000000000000000001,
 				CC0000000000000000000002,
 				CC0000000000000000000003,
@@ -320,6 +333,7 @@
 			files = (
 				AA0000000000000000000029,
 				AA000000000000000000002B,
+				AA00000000000000000000F7,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

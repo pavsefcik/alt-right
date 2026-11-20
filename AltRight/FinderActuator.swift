@@ -61,7 +61,7 @@ enum FinderActuator {
     /// deliberately does not press Return: the user checks the destination and
     /// confirms with Return, exactly like Finder's own shortcut.
     private static func pastePath() {
-        guard clipboardText() != nil else {
+        guard let raw = clipboardText() else {
             NSSound.beep()
             return
         }
@@ -69,6 +69,15 @@ enum FinderActuator {
         guard Permissions.hasAccessibility else {
             showAccessibilityAlert()
             return
+        }
+
+        // Finder's Go to Folder only understands a plain path. A quoted or
+        // shell-escaped path (or an smb:// URL) would just beep there, so put
+        // the cleaned form on the pasteboard before pasting it.
+        if let normalized = Bookmark.normalizedPath(raw), normalized != raw {
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(normalized, forType: .string)
         }
 
         activateFinder()
