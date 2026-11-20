@@ -52,17 +52,44 @@ that is an Apple limitation. Use the menu-bar icon there; the commands work the 
 
 ## Install
 
+### From a GitHub release (another Mac)
+
+Download the latest `.dmg` from
+[Releases](https://github.com/pavsefcik/alt-right/releases), open it and drag **Alt Right**
+into **Applications**. The build is signed ad-hoc and not notarized, so remove the download
+quarantine once:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Alt Right.app"
+open "/Applications/Alt Right.app"
+```
+
+Then:
+
+1. **Finder extension** — *System Settings › General › Login Items & Extensions › Finder
+   Extensions* → enable **Alt Right**. If it is not listed:
+   ```bash
+   pluginkit -a "/Applications/Alt Right.app/Contents/PlugIns/AltRightFinderSync.appex"
+   pluginkit -e use -i com.pavel.altright.FinderSync
+   killall Finder
+   ```
+2. **Accessibility** — needed so the app can press `⇧⌘G` and `⌘K`. Open **Alt Right** from the
+   menu bar and press **Grant…**, then turn the switch on by hand (macOS does not allow
+   apps to do that).
+3. **Automation** — macOS asks once when *Add Bookmark* reads the current Finder selection.
+   Allow it.
+
+Permissions are per signature: a freshly downloaded build has to be granted Accessibility
+again.
+
+### From source (this Mac)
+
 ```bash
 ./scripts/install.sh              # Release: builds, installs to /Applications, enables the extension
 CONFIG=Debug ./scripts/install.sh # debug build
 ./scripts/uninstall.sh            # removes the app and its extension registration
+./scripts/package.sh              # dist/  →  AltRight-<version>.dmg and .zip for other Macs
 ```
-
-1. **Finder extension** — enabled by the script; if the submenu is missing, flip it on in
-   *System Settings › General › Login Items & Extensions › Finder Extensions*.
-2. **Accessibility** — needed so the app can press `⇧⌘G` and `⌘K`. Open **Alt Right** from the
-   menu bar and press **Grant…**, then turn the switch on by hand (macOS does not allow
-   apps to do that).
 
 Keep only **one** copy of the app registered. Building from Xcode while an `/Applications`
 copy exists makes macOS refuse the extension: *"An extension with the same bundle ID already
