@@ -2,25 +2,35 @@ import AppKit
 
 @MainActor
 enum BookmarkOpener {
+    /// Returns whether something was actually opened. A missing path shows its
+    /// recovery alert and reports `false`, so the caller does not count it as
+    /// a use for ranking.
+    @discardableResult
     static func open(
         _ bookmark: Bookmark,
         onEdit: (() -> Void)? = nil,
         onRemove: (() -> Void)? = nil
-    ) {
-        open(path: bookmark.path, title: bookmark.title, onEdit: onEdit, onRemove: onRemove)
+    ) -> Bool {
+        open(
+            path: bookmark.path,
+            title: bookmark.title,
+            onEdit: onEdit,
+            onRemove: onRemove
+        )
     }
 
+    @discardableResult
     static func open(
         path: String,
         title: String? = nil,
         onEdit: (() -> Void)? = nil,
         onRemove: (() -> Void)? = nil
-    ) {
+    ) -> Bool {
         if let url = URL(string: path),
            let scheme = url.scheme?.lowercased(),
            scheme == "http" || scheme == "https" {
             NSWorkspace.shared.open(url)
-            return
+            return true
         }
 
         let url = URL(fileURLWithPath: path)
@@ -32,7 +42,7 @@ enum BookmarkOpener {
 
         guard exists else {
             showMissing(path: path, title: title, onEdit: onEdit, onRemove: onRemove)
-            return
+            return false
         }
 
         if isDirectory.boolValue {
@@ -40,6 +50,7 @@ enum BookmarkOpener {
         } else {
             NSWorkspace.shared.activateFileViewerSelecting([url])
         }
+        return true
     }
 
     private static func showMissing(

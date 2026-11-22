@@ -7,9 +7,7 @@ let altRightIconName = "arrow.up.right"
 final class FinderSync: FIFinderSync {
     private enum Command: String {
         case pastePath = "paste-path"
-        case searchBookmarks = "search-bookmarks"
         case addBookmark = "add-bookmark"
-        case openHistory = "open-history"
         case recordHistory = "record-history"
     }
 
@@ -78,11 +76,9 @@ final class FinderSync: FIFinderSync {
         let shortcuts = ShortcutConfig.load()
 
         addCopyPath(to: submenu)
-        addPastePath(to: submenu)
+        addPastePath(to: submenu, shortcut: shortcuts.pastePath)
         submenu.addItem(.separator())
-        addSearchBookmarks(to: submenu, shortcut: shortcuts.searchBookmarks)
-        addAddBookmark(to: submenu, shortcut: shortcuts.addBookmark)
-        addHistory(to: submenu, shortcut: shortcuts.history)
+        addAddBookmark(to: submenu)
 
         item.submenu = submenu
         root.addItem(item)
@@ -100,52 +96,28 @@ final class FinderSync: FIFinderSync {
         menu.addItem(item)
     }
 
-    private func addPastePath(to menu: NSMenu) {
+    private func addPastePath(to menu: NSMenu, shortcut: Shortcut) {
         let paste = NSMenuItem(
             title: L("Paste Path"),
             action: #selector(pastePath(_:)),
-            keyEquivalent: ""
+            keyEquivalent: shortcut.key.lowercased()
         )
         paste.target = self
+        paste.keyEquivalentModifierMask = shortcut.eventModifiers
         paste.image = NSImage(systemSymbolName: "arrow.right.doc.on.clipboard", accessibilityDescription: nil)
         menu.addItem(paste)
     }
 
-    private func addSearchBookmarks(to menu: NSMenu, shortcut: Shortcut) {
+    private func addAddBookmark(to menu: NSMenu) {
         let item = NSMenuItem(
-            title: L("Search Bookmarks"),
-            action: #selector(searchBookmarks(_:)),
-            keyEquivalent: shortcut.key.lowercased()
-        )
-        item.target = self
-        item.keyEquivalentModifierMask = shortcut.eventModifiers
-        item.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil)
-        menu.addItem(item)
-    }
-
-    private func addAddBookmark(to menu: NSMenu, shortcut: Shortcut) {
-        let item = NSMenuItem(
-            title: L("Add Bookmark"),
+            title: L("Add as Bookmark"),
             action: #selector(addBookmark(_:)),
-            keyEquivalent: shortcut.key.lowercased()
+            keyEquivalent: ""
         )
         item.target = self
-        item.keyEquivalentModifierMask = shortcut.eventModifiers
         // "bookmark.badge.plus" does not exist as an SF Symbol, so this item
         // silently had no icon at all.
         item.image = NSImage(systemSymbolName: "bookmark", accessibilityDescription: nil)
-        menu.addItem(item)
-    }
-
-    private func addHistory(to menu: NSMenu, shortcut: Shortcut) {
-        let item = NSMenuItem(
-            title: L("History"),
-            action: #selector(openHistory(_:)),
-            keyEquivalent: shortcut.key.lowercased()
-        )
-        item.target = self
-        item.keyEquivalentModifierMask = shortcut.eventModifiers
-        item.image = NSImage(systemSymbolName: "clock.arrow.circlepath", accessibilityDescription: nil)
         menu.addItem(item)
     }
 
@@ -172,22 +144,23 @@ final class FinderSync: FIFinderSync {
         send(.pastePath)
     }
 
-    @objc private func searchBookmarks(_ sender: AnyObject?) {
-        // The path is not needed to search, but it tells the app what was
-        // clicked last, which is what "Add Bookmark…" prefills.
-        send(.searchBookmarks, data: Self.encodePaths(clickedTargets().map(Self.displayPath)))
-    }
-
-    @objc private func openHistory(_ sender: AnyObject?) {
-        send(.openHistory, data: Self.encodePaths(clickedTargets().map(Self.displayPath)))
-    }
-
     @objc private func addBookmark(_ sender: AnyObject?) {
         let paths = clickedTargets().map(Self.displayPath)
         guard !paths.isEmpty, let data = Self.encodePaths(paths) else {
             NSSound.beep()
             return
         }
+
+        // The URL scheme is how a cold app launch receives the paths. When the
+        // app is already running, the distributed notification gets there
+        // instantly and does not depend on the Apple-event handler staying
+        // installed (SwiftUI can take it over when a scene appears).
+        DistributedNotificationCenter.default().postNotificationName(
+            AddBookmarkNotification.name,
+            object: nil,
+            userInfo: ["data": data],
+            deliverImmediately: true
+        )
         send(.addBookmark, data: data)
     }
 
@@ -227,19 +200,20 @@ final class FinderSync: FIFinderSync {
         return path
     }
 
-    /// The item the user acted on. `selectedItemURLs()` can still report an
-    /// older selection — Finder does not always re-select before building the
-    /// menu — so a right-click on an item outside the selection would otherwise
-    /// operate on the previously selected file. The right-clicked item wins; a
-    /// multi-selection it belongs to is kept as a selection.
+    /// The item(s) the user acted on.
+    ///
+    /// Selection, not `targetedURL()`, is the truth for a right-click on an
+    /// item: Finder selects the item before showing the menu. `targetedURL()`
+    /// reports the enclosing folder for a file in some Finder versions, which
+    /// made Add Bookmark save the folder above the clicked file. The target is
+    /// only a fallback for a background/container right-click.
     private func clickedTargets() -> [URL] {
         let controller = FIFinderSyncController.default()
         let selected = controller.selectedItemURLs() ?? []
 
-        guard let targeted = controller.targetedURL() else { return selected }
-        if selected.isEmpty { return [targeted] }
-        if selected.contains(targeted) { return selected }
-        return [targeted]
+        if !selected.isEmpty { return selected }
+        if let targeted = controller.targetedURL() { return [targeted] }
+        return []
     }
 
     private func targets() -> [URL] {

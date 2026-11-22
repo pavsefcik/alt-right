@@ -44,6 +44,7 @@ struct ContentView: View {
     @ObservedObject private var status = StatusModel.shared
     @ObservedObject private var bookmarks = BookmarkStore.shared
     @ObservedObject private var history = HistoryStore.shared
+    @ObservedObject private var copies = CopyHistoryStore.shared
     @ObservedObject private var shortcuts = ShortcutStore.shared
 
     var body: some View {
@@ -84,7 +85,7 @@ struct ContentView: View {
                             .textSelection(.enabled)
                     }
                 }
-                Text(L("Copy paths, jump to paths, and connect to servers — straight from Finder’s context menu."))
+                Text(L("Manage paths, copies and bookmarks from your menu bar."))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -105,7 +106,7 @@ struct ContentView: View {
                 Button(L("Search Bookmarks…")) {
                     BookmarkCoordinator.shared.showSearch()
                 }
-                .controlSize(.small)
+                .buttonStyle(PanelButtonStyle())
             }
 
             HStack(spacing: 10) {
@@ -116,15 +117,30 @@ struct ContentView: View {
                      : String(format: L("%d copied paths"), history.entries.count))
                     .font(.system(size: 13, weight: .medium))
                 Spacer(minLength: 0)
-                Button(L("History")) {
+                Button(L("Copied Paths")) {
                     BookmarkCoordinator.shared.showHistory()
                 }
-                .controlSize(.small)
+                .buttonStyle(PanelButtonStyle())
+            }
+
+            HStack(spacing: 10) {
+                Image(systemName: "doc.on.doc")
+                    .foregroundStyle(.secondary)
+                Text(copies.entries.count == 1
+                     ? String(format: L("%d copy"), 1)
+                     : String(format: L("%d copies"), copies.entries.count))
+                    .font(.system(size: 13, weight: .medium))
+                Spacer(minLength: 0)
+                Button(L("Copies")) {
+                    StatusItemController.shared.showPanelCopyHistory()
+                }
+                .buttonStyle(PanelButtonStyle())
             }
         }
         .onAppear {
             bookmarks.load()
             history.load()
+            copies.load()
         }
     }
 
@@ -153,7 +169,7 @@ struct ContentView: View {
                     Button(L("Restore Defaults")) {
                         shortcuts.reset()
                     }
-                    .controlSize(.small)
+                    .buttonStyle(PanelButtonStyle())
                 }
             }
         }
@@ -192,7 +208,7 @@ struct ContentView: View {
                 Button(L("Restart Finder")) {
                     ExtensionStatus.restartFinder()
                 }
-                .controlSize(.small)
+                .buttonStyle(PanelButtonStyle())
             }
         }
     }
@@ -223,9 +239,14 @@ private struct ShortcutRow: View {
                     .font(.system(size: 12, design: .monospaced))
                     .frame(minWidth: 92)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .tint(recording ? .accentColor : nil)
+            .buttonStyle(PanelButtonStyle())
+            .overlay(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(
+                        recording ? Color.accentColor : Color.clear,
+                        lineWidth: 1.5
+                    )
+            )
         }
         .onDisappear {
             stopRecording()
@@ -234,9 +255,10 @@ private struct ShortcutRow: View {
 
     private var symbol: String {
         switch action {
+        case .addBookmark: return "plus.circle"
         case .searchBookmarks: return "magnifyingglass"
-        case .addBookmark: return "bookmark"
         case .history: return "clock.arrow.circlepath"
+        case .pastePath: return "doc.on.clipboard"
         }
     }
 
@@ -321,82 +343,8 @@ private struct StatusRow: View {
 
             if let actionTitle {
                 Button(actionTitle, action: action)
-                    .controlSize(.small)
+                    .buttonStyle(PanelButtonStyle())
             }
-        }
-    }
-}
-
-struct MenuBarView: View {
-    @ObservedObject private var shortcuts = ShortcutStore.shared
-
-    var body: some View {
-        Button(L("Search Bookmarks")) {
-            DispatchQueue.main.async {
-                BookmarkCoordinator.shared.showSearch()
-            }
-        }
-        .keyboardShortcut(
-            shortcuts.settings.searchBookmarks.swiftUIKey,
-            modifiers: shortcuts.settings.searchBookmarks.swiftUIModifiers
-        )
-
-        Button(L("Add Bookmark")) {
-            DispatchQueue.main.async {
-                BookmarkCoordinator.shared.presentNewBookmark(useFinderSelection: true)
-            }
-        }
-        .keyboardShortcut(
-            shortcuts.settings.addBookmark.swiftUIKey,
-            modifiers: shortcuts.settings.addBookmark.swiftUIModifiers
-        )
-
-        Divider()
-
-        Button(L("Copy Path")) { run(.copyPath) }
-            .keyboardShortcut("c", modifiers: [.command, .option])
-
-        // Paste Path is a convenience over “Go to Folder”: it also pastes the
-        // clipboard, so it has no shortcut of its own.
-        Button(L("Paste Path")) { run(.pastePath) }
-
-        Button(L("History")) {
-            DispatchQueue.main.async {
-                BookmarkCoordinator.shared.showHistory()
-            }
-        }
-        .keyboardShortcut(
-            shortcuts.settings.history.swiftUIKey,
-            modifiers: shortcuts.settings.history.swiftUIModifiers
-        )
-
-        Button(L("Go to Folder")) { run(.goToFolder) }
-            .keyboardShortcut("g", modifiers: [.command, .shift])
-
-        Button(L("Connect to Server")) { run(.connectToServer) }
-            .keyboardShortcut("k", modifiers: .command)
-
-        Divider()
-
-        Button(L("Open Alt Right")) {
-            // Let the menu-bar menu close before presenting the settings window.
-            DispatchQueue.main.async {
-                AppDelegate.shared?.showSettings()
-            }
-        }
-
-        Divider()
-
-        Button(L("Quit Alt Right")) {
-            NSApplication.shared.terminate(nil)
-        }
-        .keyboardShortcut("q")
-    }
-
-    /// Menu-bar menus close before the action runs, so give Finder a moment.
-    private func run(_ action: FinderAction) {
-        DispatchQueue.main.async {
-            FinderActuator.perform(action)
         }
     }
 }

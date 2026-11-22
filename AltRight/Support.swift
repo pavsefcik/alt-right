@@ -128,6 +128,67 @@ struct IconTile: View {
     }
 }
 
+/// The swatch a copied colour puts in front of its text — the same 24 pt
+/// footprint as `IconTile`, so rows do not jump depending on what they hold.
+/// The border keeps white and near-white colours visible against the panel, and
+/// the checkerboard shows through anything partly transparent.
+struct ColorSwatch: View {
+    let color: ColorLiteral
+
+    private let radius: CGFloat = 6
+
+    var body: some View {
+        ZStack {
+            if color.alpha < 1 {
+                Checkerboard()
+            }
+
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(Color(nsColor: color.nsColor))
+        }
+        .frame(width: 24, height: 24)
+        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1)
+        )
+        .help(color.tooltip)
+        .accessibilityLabel(color.hex)
+    }
+
+    /// Four-point squares under the fill, so `#FE92F580` reads as translucent
+    /// instead of as a lighter colour.
+    private struct Checkerboard: View {
+        private let square: CGFloat = 4
+
+        var body: some View {
+            Canvas { context, size in
+                context.fill(
+                    Path(CGRect(origin: .zero, size: size)),
+                    with: .color(.white)
+                )
+
+                let columns = Int(ceil(size.width / square))
+                let rows = Int(ceil(size.height / square))
+                for row in 0..<rows {
+                    for column in 0..<columns where (row + column).isMultiple(of: 2) {
+                        let rect = CGRect(
+                            x: CGFloat(column) * square,
+                            y: CGFloat(row) * square,
+                            width: square,
+                            height: square
+                        )
+                        context.fill(
+                            Path(rect),
+                            with: .color(Color(nsColor: .quaternaryLabelColor))
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Symbol for a saved path, so a folder does not look like a web link.
 func pathSymbol(_ path: String) -> String {
     let lower = path.lowercased()
@@ -139,4 +200,134 @@ func pathSymbol(_ path: String) -> String {
         return isDirectory.boolValue ? "folder.fill" : "doc.fill"
     }
     return "questionmark.folder"
+}
+
+/// The rounded background every list row in the panel shares: the accent fill
+/// for the click/keyboard selection, and a faint neutral fill whenever the
+/// pointer is over the row. The hover flag lives in the modifier so each row
+/// tracks its own pointer instead of the list keeping one global hover id.
+struct ListRowHighlight: ViewModifier {
+    var selected: Bool
+    var cornerRadius: CGFloat = 7
+
+    @State private var hovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(fill)
+            )
+            .onHover { hovering = $0 }
+    }
+
+    private var fill: Color {
+        if selected { return Color.accentColor.opacity(0.18) }
+        return hovering ? Color.primary.opacity(0.07) : .clear
+    }
+}
+
+extension View {
+    /// `row.listRowHighlight(selected: id == selectedID)` — selection fill plus
+    /// a hover fill that needs no click.
+    func listRowHighlight(selected: Bool) -> some View {
+        modifier(ListRowHighlight(selected: selected))
+    }
+}
+
+// MARK: - Buttons
+
+/// The one button look the app uses: a white fill and a hairline grey border on
+/// a soft radius. AppKit's `.bordered` controls pick up the window's control
+/// tint and read as flat grey blocks in a light popover; this keeps every
+/// action the same weight and looks lighter than the panel behind it.
+struct PanelButtonStyle: ButtonStyle {
+    var role: ButtonRole?
+
+    func makeBody(configuration: Configuration) -> some View {
+        StyleBody(configuration: configuration, role: role)
+    }
+
+    private struct StyleBody: View {
+        let configuration: PanelButtonStyle.Configuration
+        let role: ButtonRole?
+
+        @Environment(\.isEnabled) private var isEnabled
+
+        var body: some View {
+            configuration.label
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(foreground)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 5)
+                .frame(minHeight: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color(nsColor: .textBackgroundColor))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .strokeBorder(
+                            Color(nsColor: .separatorColor),
+                            lineWidth: 1
+                        )
+                )
+                .opacity(configuration.isPressed ? 0.72 : 1)
+                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+        }
+
+        private var foreground: Color {
+            guard isEnabled else { return Color.secondary.opacity(0.7) }
+            if role == .destructive { return Color.red }
+            return Color.primary
+        }
+    }
+}
+
+extension View {
+    /// `Button { … } label: { … }.panelButtonStyle()` — the app-wide look.
+    func panelButtonStyle(role: ButtonRole? = nil) -> some View {
+        buttonStyle(PanelButtonStyle(role: role))
+    }
+}
+
+/// The two neighbouring faces of the panel, drawn at the right end of every
+/// footer: `‹ Copies` and `Paths ›`. The ring order is Bookmarks → Paths →
+/// Copies → Bookmarks, so the left button is where the ← key goes and the
+/// right button where Tab and → go.
+struct ModeNavButtons: View {
+    let previousTitle: String
+    let nextTitle: String
+    let onPrevious: () -> Void
+    let onNext: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Button(action: onPrevious) {
+                HStack(spacing: 4) {
+                    Chevron(direction: "chevron.left")
+                    Text(previousTitle)
+                }
+            }
+            .help(L("Press ← to switch"))
+
+            Button(action: onNext) {
+                HStack(spacing: 4) {
+                    Text(nextTitle)
+                    Chevron(direction: "chevron.right")
+                }
+            }
+            .help(L("Press → to switch"))
+        }
+    }
+
+    private struct Chevron: View {
+        let direction: String
+
+        var body: some View {
+            Image(systemName: direction)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(.tertiary)
+        }
+    }
 }

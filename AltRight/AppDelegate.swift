@@ -33,16 +33,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // SwiftUI installs its own kAEGetURL handler while the scenes start up, which
         // would swallow our events, so claim the URL events again once it's done.
         installURLEventHandler()
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleAddBookmarkNotification(_:)),
+            name: AddBookmarkNotification.name,
+            object: nil
+        )
         BookmarkCoordinator.shared.start()
         ShortcutStore.shared.load()
         ShortcutConfig.startServingChanges()
         PasteboardWatcher.shared.start()
         StatusModel.shared.start()
         GlobalHotKeys.shared.start()
+        StatusItemController.shared.install()
     }
 
-    /// The app is an accessory (LSUIElement), so its settings window is created and
-    /// shown by hand instead of by a SwiftUI scene.
+    /// The app is an accessory (LSUIElement), so it cannot rely on a SwiftUI
+    /// window scene being brought forward by a selector. The settings window is
+    /// owned here, exactly like the menu-bar panel.
     private lazy var settingsWindow: NSWindow = {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 480, height: 560),
@@ -64,9 +72,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func showSettings() {
         Self.log("showSettings")
+        StatusItemController.shared.closePanel()
         AppActivation.activate()
+        NSApp.activate(ignoringOtherApps: true)
         StatusModel.shared.refresh()
         settingsWindow.makeKeyAndOrderFront(nil)
+    }
+
+    /// SwiftUI may replace the Apple-event handler when a scene appears (the
+    /// Settings window, for example). Claim it again whenever we come forward.
+    func applicationDidBecomeActive(_ notification: Notification) {
+        installURLEventHandler()
+    }
+
+    @objc private func handleAddBookmarkNotification(_ notification: Notification) {
+        guard let value = notification.userInfo?["data"] as? String,
+              let paths = PathPayload.decode(value) else {
+            return
+        }
+        BookmarkCoordinator.shared.handleAdd(paths: paths)
     }
 
     @objc private func handleGetURLEvent(_ event: NSAppleEventDescriptor, withReplyEvent reply: NSAppleEventDescriptor) {

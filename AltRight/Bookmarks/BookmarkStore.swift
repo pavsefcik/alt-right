@@ -88,6 +88,42 @@ final class BookmarkStore: ObservableObject {
         bookmarks.contains { $0.path == path }
     }
 
+    /// Records a successful open, which is what the relevance ranking learns
+    /// from. The array order stays untouched; ordering happens at display time
+    /// in `BookmarkRanker`.
+    func markOpened(path: String) {
+        guard let index = bookmarks.firstIndex(where: { $0.path == path }) else {
+            return
+        }
+
+        var updated = bookmarks
+        updated[index].lastOpenedAt = Date()
+        updated[index].openCount += 1
+
+        do {
+            try save(updated)
+            bookmarks = updated
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    func setPinned(_ pinned: Bool, path: String) {
+        guard let index = bookmarks.firstIndex(where: { $0.path == path }) else {
+            return
+        }
+
+        var updated = bookmarks
+        updated[index].pinned = pinned
+
+        do {
+            try save(updated)
+            bookmarks = updated
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
     private func read() throws -> [Bookmark] {
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             return []

@@ -33,11 +33,20 @@
 		CC0000000000000000000004 /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000004 /* HistoryStore.swift */; };
 		CC0000000000000000000005 /* PathPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000005 /* PathPayload.swift */; };
 		CC0000000000000000000006 /* BookmarkOpener.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000006 /* BookmarkOpener.swift */; };
-		CC0000000000000000000007 /* BookmarkSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000007 /* BookmarkSearchView.swift */; };
 		CC0000000000000000000008 /* BookmarkEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000008 /* BookmarkEditorView.swift */; };
-		CC0000000000000000000009 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000009 /* HistoryView.swift */; };
-		CC000000000000000000000A /* BookmarkWindows.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000A /* BookmarkWindows.swift */; };
 		CC000000000000000000000B /* BookmarkCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000B /* BookmarkCoordinator.swift */; };
+		CC000000000000000000000C /* BookmarkRanker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000C /* BookmarkRanker.swift */; };
+		CC000000000000000000000D /* QuickPanelModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000D /* QuickPanelModel.swift */; };
+		CC000000000000000000000E /* QuickPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000E /* QuickPanelView.swift */; };
+		CC000000000000000000000F /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000000000000000000000F /* StatusItemController.swift */; };
+		CC0000000000000000000010 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000010 /* UpdateChecker.swift */; };
+		CC0000000000000000000011 /* HistoryPanelModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000011 /* HistoryPanelModel.swift */; };
+		CC0000000000000000000012 /* HistoryPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000012 /* HistoryPanelView.swift */; };
+		CC0000000000000000000013 /* CopyHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000013 /* CopyHistoryStore.swift */; };
+		CC0000000000000000000014 /* CopyHistoryPanelModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000014 /* CopyHistoryPanelModel.swift */; };
+		CC0000000000000000000015 /* CopyHistoryPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000015 /* CopyHistoryPanelView.swift */; };
+		CC0000000000000000000016 /* ColorLiteral.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000016 /* ColorLiteral.swift */; };
+		CC0000000000000000000017 /* ColorSystems.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000017 /* ColorSystems.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -94,11 +103,20 @@
 		BB0000000000000000000004 /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStore.swift; sourceTree = "<group>"; };
 		BB0000000000000000000005 /* PathPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PathPayload.swift; sourceTree = "<group>"; };
 		BB0000000000000000000006 /* BookmarkOpener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkOpener.swift; sourceTree = "<group>"; };
-		BB0000000000000000000007 /* BookmarkSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkSearchView.swift; sourceTree = "<group>"; };
 		BB0000000000000000000008 /* BookmarkEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkEditorView.swift; sourceTree = "<group>"; };
-		BB0000000000000000000009 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
-		BB000000000000000000000A /* BookmarkWindows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkWindows.swift; sourceTree = "<group>"; };
 		BB000000000000000000000B /* BookmarkCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkCoordinator.swift; sourceTree = "<group>"; };
+		BB000000000000000000000C /* BookmarkRanker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkRanker.swift; sourceTree = "<group>"; };
+		BB000000000000000000000D /* QuickPanelModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPanelModel.swift; sourceTree = "<group>"; };
+		BB000000000000000000000E /* QuickPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPanelView.swift; sourceTree = "<group>"; };
+		BB000000000000000000000F /* StatusItemController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemController.swift; sourceTree = "<group>"; };
+		BB0000000000000000000010 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
+		BB0000000000000000000011 /* HistoryPanelModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryPanelModel.swift; sourceTree = "<group>"; };
+		BB0000000000000000000012 /* HistoryPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryPanelView.swift; sourceTree = "<group>"; };
+		BB0000000000000000000013 /* CopyHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopyHistoryStore.swift; sourceTree = "<group>"; };
+		BB0000000000000000000014 /* CopyHistoryPanelModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopyHistoryPanelModel.swift; sourceTree = "<group>"; };
+		BB0000000000000000000015 /* CopyHistoryPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopyHistoryPanelView.swift; sourceTree = "<group>"; };
+		BB0000000000000000000016 /* ColorLiteral.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorLiteral.swift; sourceTree = "<group>"; };
+		BB0000000000000000000017 /* ColorSystems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorSystems.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -145,6 +163,8 @@
 				AA00000000000000000000F3 /* GlobalHotKeys.swift */,
 				AA00000000000000000000F5 /* ShortcutConfig.swift */,
 				AA00000000000000000000F8 /* ShortcutStore.swift */,
+				BB0000000000000000000010 /* UpdateChecker.swift */,
+				BB00000000000000000000BD /* QuickPanel */,
 				BB00000000000000000000BC /* Bookmarks */,
 				AA0000000000000000000018 /* Localizable.strings */,
 				AA00000000000000000000F2 /* AppIcon.icns */,
@@ -190,15 +210,30 @@
 				BB0000000000000000000002 /* BookmarkStore.swift */,
 				BB0000000000000000000003 /* FuzzyMatcher.swift */,
 				BB0000000000000000000004 /* HistoryStore.swift */,
+				BB0000000000000000000013 /* CopyHistoryStore.swift */,
 				BB0000000000000000000005 /* PathPayload.swift */,
 				BB0000000000000000000006 /* BookmarkOpener.swift */,
-				BB0000000000000000000007 /* BookmarkSearchView.swift */,
 				BB0000000000000000000008 /* BookmarkEditorView.swift */,
-				BB0000000000000000000009 /* HistoryView.swift */,
-				BB000000000000000000000A /* BookmarkWindows.swift */,
 				BB000000000000000000000B /* BookmarkCoordinator.swift */,
 			);
 			path = Bookmarks;
+			sourceTree = "<group>";
+		};
+		BB00000000000000000000BD /* QuickPanel */ = {
+			isa = PBXGroup;
+			children = (
+				BB000000000000000000000C /* BookmarkRanker.swift */,
+				BB000000000000000000000D /* QuickPanelModel.swift */,
+				BB000000000000000000000E /* QuickPanelView.swift */,
+				BB000000000000000000000F /* StatusItemController.swift */,
+				BB0000000000000000000011 /* HistoryPanelModel.swift */,
+				BB0000000000000000000012 /* HistoryPanelView.swift */,
+				BB0000000000000000000014 /* CopyHistoryPanelModel.swift */,
+				BB0000000000000000000015 /* CopyHistoryPanelView.swift */,
+				BB0000000000000000000016 /* ColorLiteral.swift */,
+				BB0000000000000000000017 /* ColorSystems.swift */,
+			);
+			path = QuickPanel;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -324,6 +359,18 @@
 				CC0000000000000000000009,
 				CC000000000000000000000A,
 				CC000000000000000000000B,
+				CC000000000000000000000C,
+				CC000000000000000000000D,
+				CC000000000000000000000E,
+				CC000000000000000000000F,
+				CC0000000000000000000010,
+				CC0000000000000000000011,
+				CC0000000000000000000012,
+				CC0000000000000000000013,
+				CC0000000000000000000014,
+				CC0000000000000000000015,
+				CC0000000000000000000016,
+				CC0000000000000000000017,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -438,7 +485,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.102.0;
+				MARKETING_VERSION = 0.103.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pavel.altright;
 				PRODUCT_NAME = "Alt Right";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -461,7 +508,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.102.0;
+				MARKETING_VERSION = 0.103.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pavel.altright;
 				PRODUCT_NAME = "Alt Right";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -484,7 +531,7 @@
 					"$(inherited)",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 0.102.0;
+				MARKETING_VERSION = 0.103.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pavel.altright.FinderSync;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -508,7 +555,7 @@
 					"$(inherited)",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 0.102.0;
+				MARKETING_VERSION = 0.103.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pavel.altright.FinderSync;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

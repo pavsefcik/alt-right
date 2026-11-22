@@ -7,10 +7,6 @@ final class BookmarkCoordinator {
     let bookmarks = BookmarkStore.shared
     let history = HistoryStore.shared
 
-    private lazy var searchWindow = BookmarkSearchWindowController(store: bookmarks)
-    private lazy var editorWindow = BookmarkEditorWindowController(store: bookmarks)
-    private lazy var historyWindow = HistoryWindowController(store: history)
-
     private init() {}
 
     /// The last path the user picked in Finder or copied anywhere.
@@ -36,19 +32,26 @@ final class BookmarkCoordinator {
 
     func showSearch() {
         bookmarks.load()
-        searchWindow.show()
+        StatusItemController.shared.showPanelBookmarks()
     }
 
     func showHistory() {
         history.load()
-        historyWindow.show()
+        StatusItemController.shared.showPanelHistory()
     }
 
     func presentNewBookmark(initialPath: String = "", useFinderSelection: Bool = false) {
         let path = initialPath.isEmpty
             ? preferredNewBookmarkPath(useFinderSelection: useFinderSelection)
             : initialPath
-        editorWindow.present(existing: nil, initialPath: path)
+        StatusItemController.shared.showPanelAddingBookmark(initialPath: path)
+    }
+
+    /// What a new bookmark should start with when the caller has no path of
+    /// its own (the panel’s + Add button). Finder’s current selection wins,
+    /// exactly like the Finder context-menu Add Bookmark.
+    func suggestedNewBookmarkPath() -> String {
+        preferredNewBookmarkPath(useFinderSelection: true)
     }
 
     /// What the editor should start with when no path was handed over.
@@ -66,11 +69,29 @@ final class BookmarkCoordinator {
     }
 
     func presentEditor(for bookmark: Bookmark) {
-        editorWindow.present(existing: bookmark, initialPath: bookmark.path)
+        StatusItemController.shared.showPanel(editing: bookmark)
     }
 
     func removeBookmark(path: String) {
         try? bookmarks.remove(paths: [path])
+    }
+
+    /// Opens a bookmark and records the use that drives relevance ranking.
+    @discardableResult
+    func open(
+        _ bookmark: Bookmark,
+        onEdit: (() -> Void)? = nil,
+        onRemove: (() -> Void)? = nil
+    ) -> Bool {
+        let opened = BookmarkOpener.open(
+            bookmark,
+            onEdit: onEdit,
+            onRemove: onRemove
+        )
+        if opened {
+            bookmarks.markOpened(path: bookmark.path)
+        }
+        return opened
     }
 
     func recordHistory(paths: [String]) {
@@ -78,8 +99,20 @@ final class BookmarkCoordinator {
         history.record(paths: paths)
     }
 
+    /// The Finder extension sends Add Bookmark twice (notification + URL) so
+    /// it works whether the app is running or has to be launched. Ignore the
+    /// duplicate.
+    private var lastAdd: (paths: [String], date: Date)?
+
     /// Handles paths sent from the Finder extension.
     func handleAdd(paths: [String]) {
+        if let lastAdd,
+           Date().timeIntervalSince(lastAdd.date) < 1.5,
+           lastAdd.paths == paths {
+            return
+        }
+        lastAdd = (paths, Date())
+
         let normalized = unique(paths.compactMap(Bookmark.normalizedPath))
 
         guard !normalized.isEmpty else {
@@ -179,14 +212,14 @@ final class BookmarkCoordinator {
 
 // MARK: - Pasteboard
 
-/// Records paths copied outside Alt Right — above all Finder's own ⌥⌘C
-/// (*Copy as Pathname*), which the Finder Sync extension never sees because it
-/// is a Finder command, not one of ours.
+/// Records what the clipboard holds: every text copy goes to the copy history,
+/// and paths copied outside Alt Right — above all Finder's own ⌥⌘C (*Copy as
+/// Pathname*), which the Finder Sync extension never sees because it is a
+/// Finder command, not one of ours — also go to the path history.
 ///
 /// There is no pasteboard-change notification, so this polls `changeCount` about
-/// once a second (no disk, no network) and accepts the clipboard only when every
-/// line is a path or URL `Bookmark.normalizedPath` understands. Copying prose,
-/// code or a file itself is ignored.
+/// once a second (no disk, no network). Text marked concealed or transient by
+/// the app that copied it (password managers do this) is never recorded.
 @MainActor
 final class PasteboardWatcher {
     static let shared = PasteboardWatcher()
@@ -194,6 +227,15 @@ final class PasteboardWatcher {
     private var timer: Timer?
     private var lastChangeCount = NSPasteboard.general.changeCount
     private let maxPaths = 200
+
+    /// Marker types password managers and clipboard tools use to say "do not
+    /// keep this": `org.nspasteboard.ConcealedType` for secrets and
+    /// `org.nspasteboard.TransientType` for anything meant to be pasted once.
+    private let skipTypes = [
+        NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"),
+        NSPasteboard.PasteboardType("org.nspasteboard.TransientType"),
+        NSPasteboard.PasteboardType("org.nspasteboard.AutoGeneratedType"),
+    ]
 
     private init() {}
 
@@ -210,12 +252,25 @@ final class PasteboardWatcher {
         self.timer = timer
     }
 
+    /// Marks whatever is on the clipboard right now as already seen, so the
+    /// app's own Copy buttons do not re-record the entry they just wrote.
+    func noteOwnWrite() {
+        lastChangeCount = NSPasteboard.general.changeCount
+    }
+
     private func poll() {
         let pasteboard = NSPasteboard.general
         guard pasteboard.changeCount != lastChangeCount else { return }
         lastChangeCount = pasteboard.changeCount
 
         guard let text = pasteboard.string(forType: .string) else { return }
+
+        let types = Set(pasteboard.types ?? [])
+        guard types.isDisjoint(with: skipTypes) else { return }
+
+        // Everything copied, text or paths: the copy history is the general one.
+        CopyHistoryStore.shared.record(text: text)
+
         let lines = text
             .split(separator: "\n", omittingEmptySubsequences: false)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }

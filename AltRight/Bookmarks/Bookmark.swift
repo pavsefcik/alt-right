@@ -7,18 +7,38 @@ struct Bookmark: Codable, Identifiable, Hashable {
     var title: String
     var description: String
 
+    /// Ranking signals. They are optional so bookmark files written by older
+    /// versions keep loading; a bookmark that was never opened simply has no
+    /// frecency and sorts below ones that were.
+    var lastOpenedAt: Date?
+    var openCount: Int
+    var pinned: Bool
+
     var id: String { path }
 
-    init(path: String, title: String, description: String = "") {
+    init(
+        path: String,
+        title: String,
+        description: String = "",
+        lastOpenedAt: Date? = nil,
+        openCount: Int = 0,
+        pinned: Bool = false
+    ) {
         self.path = path
         self.title = title
         self.description = description
+        self.lastOpenedAt = lastOpenedAt
+        self.openCount = openCount
+        self.pinned = pinned
     }
 
     private enum CodingKeys: String, CodingKey {
         case path
         case title
         case description
+        case lastOpenedAt
+        case openCount
+        case pinned
     }
 
     init(from decoder: Decoder) throws {
@@ -26,6 +46,9 @@ struct Bookmark: Codable, Identifiable, Hashable {
         path = try container.decode(String.self, forKey: .path)
         title = try container.decode(String.self, forKey: .title)
         description = try container.decodeIfPresent(String.self, forKey: .description) ?? ""
+        lastOpenedAt = try container.decodeIfPresent(Date.self, forKey: .lastOpenedAt)
+        openCount = try container.decodeIfPresent(Int.self, forKey: .openCount) ?? 0
+        pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
     }
 
     /// Normalizes user input into the form stored on disk. Returns nil for

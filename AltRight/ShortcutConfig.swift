@@ -2,20 +2,28 @@ import AppKit
 import Carbon.HIToolbox
 import Foundation
 
-/// The three commands whose shortcuts can be changed. Raw values are the stable
-/// keys of the JSON file that is shared with the Finder extension.
+/// The commands whose shortcuts can be changed. Raw values are the stable keys
+/// of the JSON file that is shared with the Finder extension.
 enum ShortcutAction: String, CaseIterable, Codable, Hashable {
-    case searchBookmarks
     case addBookmark
+    case searchBookmarks
     case history
+    case pastePath
 
     var title: String {
         switch self {
-        case .searchBookmarks: return L("Search Bookmarks")
         case .addBookmark: return L("Add Bookmark")
-        case .history: return L("History")
+        case .searchBookmarks: return L("Bookmarks")
+        case .history: return L("Copied Paths")
+        case .pastePath: return L("Paste Path")
         }
     }
+}
+
+/// Finder extension → app handoff for Add Bookmark when the app is already
+/// running. The URL scheme is still used to launch a cold app.
+enum AddBookmarkNotification {
+    static let name = Notification.Name("com.pavel.altright.addBookmark")
 }
 
 /// One key combination, stored in Carbon terms because that is what the global
@@ -49,41 +57,92 @@ struct Shortcut: Codable, Equatable {
 }
 
 struct ShortcutSettings: Codable, Equatable {
-    var searchBookmarks: Shortcut
     var addBookmark: Shortcut
+    var searchBookmarks: Shortcut
     var history: Shortcut
+    var pastePath: Shortcut
 
     static let standard = ShortcutSettings(
-        searchBookmarks: Shortcut(
-            keyCode: UInt32(kVK_ANSI_B),
-            modifiers: UInt32(cmdKey | optionKey),
-            key: "B"
-        ),
         addBookmark: Shortcut(
             keyCode: UInt32(kVK_ANSI_B),
             modifiers: UInt32(cmdKey | optionKey | shiftKey),
+            key: "B"
+        ),
+        searchBookmarks: Shortcut(
+            keyCode: UInt32(kVK_ANSI_B),
+            modifiers: UInt32(cmdKey | optionKey),
             key: "B"
         ),
         history: Shortcut(
             keyCode: UInt32(kVK_ANSI_H),
             modifiers: UInt32(cmdKey | controlKey),
             key: "H"
+        ),
+        pastePath: Shortcut(
+            keyCode: UInt32(kVK_ANSI_G),
+            modifiers: UInt32(cmdKey | optionKey | shiftKey),
+            key: "G"
         )
     )
+
+    private enum CodingKeys: String, CodingKey {
+        case addBookmark
+        case searchBookmarks
+        case history
+        case pastePath
+    }
+
+    init(
+        addBookmark: Shortcut,
+        searchBookmarks: Shortcut,
+        history: Shortcut,
+        pastePath: Shortcut
+    ) {
+        self.addBookmark = addBookmark
+        self.searchBookmarks = searchBookmarks
+        self.history = history
+        self.pastePath = pastePath
+    }
+
+    /// Tolerant decoding: old files predate `addBookmark` and `pastePath`.
+    /// Missing keys fall back to the standard combination instead of throwing
+    /// the whole settings file away.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let standard = ShortcutSettings.standard
+        addBookmark = try container.decodeIfPresent(
+            Shortcut.self,
+            forKey: .addBookmark
+        ) ?? standard.addBookmark
+        searchBookmarks = try container.decodeIfPresent(
+            Shortcut.self,
+            forKey: .searchBookmarks
+        ) ?? standard.searchBookmarks
+        history = try container.decodeIfPresent(
+            Shortcut.self,
+            forKey: .history
+        ) ?? standard.history
+        pastePath = try container.decodeIfPresent(
+            Shortcut.self,
+            forKey: .pastePath
+        ) ?? standard.pastePath
+    }
 
     subscript(action: ShortcutAction) -> Shortcut {
         get {
             switch action {
-            case .searchBookmarks: return searchBookmarks
             case .addBookmark: return addBookmark
+            case .searchBookmarks: return searchBookmarks
             case .history: return history
+            case .pastePath: return pastePath
             }
         }
         set {
             switch action {
-            case .searchBookmarks: searchBookmarks = newValue
             case .addBookmark: addBookmark = newValue
+            case .searchBookmarks: searchBookmarks = newValue
             case .history: history = newValue
+            case .pastePath: pastePath = newValue
             }
         }
     }

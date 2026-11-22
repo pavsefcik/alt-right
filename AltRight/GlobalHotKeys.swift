@@ -73,19 +73,24 @@ final class GlobalHotKeys {
         self.settings = settings
         unregister()
 
+        register(settings.addBookmark, id: 4) {
+            Task { @MainActor in
+                BookmarkCoordinator.shared.presentNewBookmark()
+            }
+        }
         register(settings.searchBookmarks, id: 1) {
             Task { @MainActor in
                 BookmarkCoordinator.shared.showSearch()
             }
         }
-        register(settings.addBookmark, id: 2) {
-            Task { @MainActor in
-                BookmarkCoordinator.shared.presentNewBookmark(useFinderSelection: true)
-            }
-        }
-        register(settings.history, id: 3) {
+        register(settings.history, id: 2) {
             Task { @MainActor in
                 BookmarkCoordinator.shared.showHistory()
+            }
+        }
+        register(settings.pastePath, id: 3) {
+            Task { @MainActor in
+                FinderActuator.perform(.pastePath)
             }
         }
     }

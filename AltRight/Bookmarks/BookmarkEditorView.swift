@@ -39,10 +39,11 @@ struct BookmarkEditorView: View {
     var body: some View {
         VStack(spacing: 0) {
             content
-            Divider()
+            Spacer(minLength: 0)
             footer
         }
-        .frame(width: 470)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
             pathFocused = existing == nil
         }
@@ -58,6 +59,9 @@ struct BookmarkEditorView: View {
     /// fields flush with the 16 pt gutter, nothing centred or boxed off.
     private var content: some View {
         VStack(alignment: .leading, spacing: 14) {
+            Text(existing == nil ? L("Add Bookmark") : L("Edit Bookmark"))
+                .font(.system(size: 17, weight: .semibold))
+
             labelled(L("Path or URL")) {
                 HStack(spacing: 8) {
                     TextField(L("Path or URL"), text: $path)
@@ -78,7 +82,7 @@ struct BookmarkEditorView: View {
                     Button(L("Browse…")) {
                         browse()
                     }
-                    .controlSize(.regular)
+                    .buttonStyle(PanelButtonStyle())
                 }
             }
 
@@ -166,12 +170,13 @@ struct BookmarkEditorView: View {
                 onCancel()
             }
             .keyboardShortcut(.cancelAction)
+            .buttonStyle(PanelButtonStyle())
 
             Button(existing == nil ? L("Add Bookmark") : L("Save")) {
                 save()
             }
             .keyboardShortcut(.defaultAction)
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(PanelButtonStyle())
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -199,7 +204,12 @@ struct BookmarkEditorView: View {
         let bookmark = Bookmark(
             path: normalized,
             title: finalTitle,
-            description: trimmedDescription
+            description: trimmedDescription,
+            // Editing the path or title must not wipe the use history the
+            // relevance ranking relies on.
+            lastOpenedAt: existing?.lastOpenedAt,
+            openCount: existing?.openCount ?? 0,
+            pinned: existing?.pinned ?? false
         )
 
         do {
@@ -217,10 +227,8 @@ struct BookmarkEditorView: View {
     }
 
     /// Opens the standard file panel and writes the choice straight into the
-    /// editor. It is app-modal rather than a sheet: a sheet would make the
-    /// summoned editor resign key, and the sheet completion runs outside the
-    /// view's update cycle. `SummonedDismissal` keeps the editor alive while
-    /// the panel is up.
+    /// editor. App-modal is deliberate: the all-in-one panel is managed by
+    /// hand, so a modal panel does not dismiss it.
     private func browse() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
@@ -242,9 +250,7 @@ struct BookmarkEditorView: View {
         }
 
         AppActivation.activate()
-        SummonedDismissal.noteModalStart()
         let response = panel.runModal()
-        SummonedDismissal.noteModalEnd()
 
         guard response == .OK, let url = panel.url else { return }
 
