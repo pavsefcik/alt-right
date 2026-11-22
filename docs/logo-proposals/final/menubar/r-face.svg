@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
-  <!-- just the R, scaled and centred on its own: boldest silhouette at 16-18 pt -->
-  <path fill="#000" fill-rule="evenodd" d="
-    M 5.24 1.2 L 12.76 8.98 L 5.24 16.8 Z
-    M 5.24 13.63 L 8.41 16.8 L 5.24 16.8 Z
-    M 8.4 6.66 a 0.95 0.95 0 1 0 -1.9 0 a 0.95 0.95 0 1 0 1.9 0 Z
-    M 9.95 8.13 a 0.95 0.95 0 1 0 -1.9 0 a 0.95 0.95 0 1 0 1.9 0 Z"/>
-</svg>
