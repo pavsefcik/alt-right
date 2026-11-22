@@ -14,6 +14,8 @@ enum FinderActuator {
             goToFolder()
         case .connectToServer:
             connectToServer()
+        case .mergeWindows:
+            mergeWindows()
         case .openSettings:
             AppDelegate.shared?.showSettings()
         }
@@ -127,6 +129,88 @@ enum FinderActuator {
         }
     }
 
+    // MARK: - Merge All Windows
+
+    /// Folds every open Finder window into one window as tabs, using Finder's
+    /// own *Merge All Windows* command. That command has no keyboard shortcut
+    /// and lives only in Finder's Window menu, so it is reached through the
+    /// accessibility tree by its stable identifier instead of its (localized)
+    /// title.
+    private static func mergeWindows() {
+        guard Permissions.hasAccessibility else {
+            showAccessibilityAlert()
+            return
+        }
+
+        activateFinder()
+        guard let finder = FinderAX.application else {
+            NSSound.beep()
+            return
+        }
+
+        // Finder needs a beat to come forward; the menu item's enabled state
+        // follows the active windows.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            guard let item = FinderAX.menuItem(
+                in: finder,
+                identifier: "mergeAllWindows:"
+            ), FinderAX.isEnabled(item) else {
+                // Nothing to merge (one window or fewer).
+                NSSound.beep()
+                return
+            }
+            FinderAX.press(item)
+        }
+    }
+
+    // MARK: - Opening folders in tabs
+
+    /// Opens a folder as a tab in Finder's frontmost window. Returns false when
+    /// there is nothing to add a tab to, Accessibility is missing, or Finder's
+    /// *New Tab* command cannot be found; the caller then opens a normal window.
+    @discardableResult
+    static func openFolderInNewTab(_ url: URL) -> Bool {
+        guard Permissions.hasAccessibility,
+              let finder = FinderAX.application,
+              !FinderAX.windows(of: finder).isEmpty,
+              let newTab = FinderAX.menuItem(
+                  in: finder,
+                  commandKey: "T",
+                  modifiers: 0
+              ) else {
+            return false
+        }
+
+        activateFinder()
+        FinderAX.press(newTab)
+
+        // Finder creates the tab asynchronously. Once it exists it is the front
+        // window; point it at the requested folder.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            navigateFrontFinderWindow(to: url.path)
+            activateFinder()
+        }
+        return true
+    }
+
+    private static func navigateFrontFinderWindow(to path: String) {
+        let escaped = path
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let source = """
+        tell application "Finder"
+            set target of front window to POSIX file "\(escaped)"
+        end tell
+        """
+
+        guard let script = NSAppleScript(source: source) else { return }
+        var error: NSDictionary?
+        script.executeAndReturnError(&error)
+        if let error {
+            NSLog("Alt Right: could not navigate the new Finder tab: \(error)")
+        }
+    }
+
     // MARK: - Helpers
 
     private static func activateFinder() {
@@ -172,6 +256,138 @@ enum FinderActuator {
         if response == .alertFirstButtonReturn, let openSettings {
             openSettings()
         }
+    }
+}
+
+// MARK: - Finder accessibility
+
+/// Thin, read-only wrappers around Finder's accessibility tree. Only the parts
+/// needed to reach menu commands are here; the tree is small and queried on
+/// demand, never cached (Finder rebuilds its menus as windows come and go).
+private enum FinderAX {
+    static var application: AXUIElement? {
+        guard let finder = NSWorkspace.shared.runningApplications.first(where: {
+            $0.bundleIdentifier == "com.apple.finder"
+        }) else { return nil }
+        return AXUIElementCreateApplication(finder.processIdentifier)
+    }
+
+    static func windows(of application: AXUIElement) -> [AXUIElement] {
+        elements(of: application, attribute: kAXWindowsAttribute)
+    }
+
+    static func isEnabled(_ item: AXUIElement) -> Bool {
+        number(of: item, attribute: kAXEnabledAttribute)?.boolValue ?? true
+    }
+
+    static func press(_ item: AXUIElement) {
+        AXUIElementPerformAction(item, kAXPressAction as CFString)
+    }
+
+    /// Finds a menu item by the stable accessibility identifier Finder gives
+    /// it (for example `mergeAllWindows:`). Identifiers do not change with the
+    /// system language.
+    static func menuItem(
+        in application: AXUIElement,
+        identifier: String
+    ) -> AXUIElement? {
+        menuItems(of: application).first {
+            string(of: $0, attribute: kAXIdentifierAttribute) == identifier
+        }
+    }
+
+    /// Finds a menu item by its key equivalent. *New Tab* has ⌘T and no stable
+    /// identifier, so the shortcut is the most durable way to recognize it.
+    static func menuItem(
+        in application: AXUIElement,
+        commandKey: String,
+        modifiers: Int
+    ) -> AXUIElement? {
+        menuItems(of: application).first { item in
+            guard let key = string(of: item, attribute: kAXMenuItemCmdCharAttribute),
+                  key.caseInsensitiveCompare(commandKey) == .orderedSame else {
+                return false
+            }
+            let value = number(
+                of: item,
+                attribute: kAXMenuItemCmdModifiersAttribute
+            )?.intValue
+            return value == modifiers
+        }
+    }
+
+    // MARK: Tree walking
+
+    private static func menuItems(of application: AXUIElement) -> [AXUIElement] {
+        guard let menuBar = element(
+            of: application,
+            attribute: kAXMenuBarAttribute
+        ) else { return [] }
+
+        var items: [AXUIElement] = []
+        for barItem in elements(of: menuBar, attribute: kAXChildrenAttribute) {
+            for menu in elements(of: barItem, attribute: kAXChildrenAttribute) {
+                items.append(contentsOf: elements(
+                    of: menu,
+                    attribute: kAXChildrenAttribute
+                ))
+            }
+        }
+        return items
+    }
+
+    // MARK: Attribute access
+
+    private static func element(
+        of element: AXUIElement,
+        attribute: String
+    ) -> AXUIElement? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            attribute as CFString,
+            &value
+        ) == .success, let value else { return nil }
+        return (value as! AXUIElement)
+    }
+
+    private static func elements(
+        of element: AXUIElement,
+        attribute: String
+    ) -> [AXUIElement] {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            attribute as CFString,
+            &value
+        ) == .success, let value else { return [] }
+        return (value as? [AXUIElement]) ?? []
+    }
+
+    private static func string(
+        of element: AXUIElement,
+        attribute: String
+    ) -> String? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            attribute as CFString,
+            &value
+        ) == .success else { return nil }
+        return value as? String
+    }
+
+    private static func number(
+        of element: AXUIElement,
+        attribute: String
+    ) -> NSNumber? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            attribute as CFString,
+            &value
+        ) == .success else { return nil }
+        return value as? NSNumber
     }
 }
 

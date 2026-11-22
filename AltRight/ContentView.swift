@@ -46,11 +46,13 @@ struct ContentView: View {
     @ObservedObject private var history = HistoryStore.shared
     @ObservedObject private var copies = CopyHistoryStore.shared
     @ObservedObject private var shortcuts = ShortcutStore.shared
+    @AppStorage(OpenPreference.defaultsKey) private var openMode: OpenMode = .newWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             header
             setupCard
+            openingCard
             shortcutsCard
             bookmarksCard
         }
@@ -103,7 +105,7 @@ struct ContentView: View {
                      : String(format: L("%d bookmarks"), bookmarks.bookmarks.count))
                     .font(.system(size: 13, weight: .medium))
                 Spacer(minLength: 0)
-                Button(L("Search Bookmarks…")) {
+                Button(L("Manage")) {
                     BookmarkCoordinator.shared.showSearch()
                 }
                 .buttonStyle(PanelButtonStyle())
@@ -117,10 +119,11 @@ struct ContentView: View {
                      : String(format: L("%d copied paths"), history.entries.count))
                     .font(.system(size: 13, weight: .medium))
                 Spacer(minLength: 0)
-                Button(L("Copied Paths")) {
-                    BookmarkCoordinator.shared.showHistory()
+                Button(L("Clear All")) {
+                    history.clear()
                 }
                 .buttonStyle(PanelButtonStyle())
+                .disabled(history.entries.isEmpty)
             }
 
             HStack(spacing: 10) {
@@ -131,10 +134,11 @@ struct ContentView: View {
                      : String(format: L("%d copies"), copies.entries.count))
                     .font(.system(size: 13, weight: .medium))
                 Spacer(minLength: 0)
-                Button(L("Copies")) {
-                    StatusItemController.shared.showPanelCopyHistory()
+                Button(L("Clear All")) {
+                    copies.clear()
                 }
                 .buttonStyle(PanelButtonStyle())
+                .disabled(copies.entries.isEmpty)
             }
         }
         .onAppear {
@@ -175,6 +179,28 @@ struct ContentView: View {
         }
     }
 
+    private var openingCard: some View {
+        Card(title: L("Opening")) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L("Open folders from bookmarks and copied paths in"))
+                    .font(.system(size: 13, weight: .medium))
+
+                Picker("", selection: $openMode) {
+                    ForEach(OpenMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.radioGroup)
+                .labelsHidden()
+
+                Text(L("New tabs require Accessibility access. Without it, folders open in a new window."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
     private var setupCard: some View {
         Card(title: L("Setup")) {
             StatusRow(
@@ -197,7 +223,7 @@ struct ContentView: View {
                 action: status.requestAccessibility
             )
 
-            Text(L("Accessibility lets Alt Right press ⇧⌘G and ⌘K for you."))
+            Text(L("Accessibility lets Alt Right press Finder shortcuts, merge windows and open tabs for you."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -259,6 +285,7 @@ private struct ShortcutRow: View {
         case .searchBookmarks: return "magnifyingglass"
         case .history: return "clock.arrow.circlepath"
         case .pastePath: return "doc.on.clipboard"
+        case .mergeWindows: return "rectangle.on.rectangle"
         }
     }
 

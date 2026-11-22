@@ -473,6 +473,14 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
         menu.addItem(.separator())
 
+        menu.addItem(shortcutItem(
+            L("Merge All Windows"),
+            action: #selector(mergeWindowsFromMenu),
+            shortcut: shortcuts.mergeWindows
+        ))
+
+        menu.addItem(.separator())
+
         let settings = plainItem(L("Settings…"), action: #selector(openSettings))
         settings.keyEquivalent = ","
         settings.keyEquivalentModifierMask = [.command]
@@ -557,6 +565,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     @objc private func connectToServerFromMenu() {
         runFinderAction(.connectToServer)
+    }
+    @objc private func mergeWindowsFromMenu() {
+        runFinderAction(.mergeWindows)
     }
 
     @objc private func quit() {

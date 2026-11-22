@@ -93,6 +93,11 @@ final class GlobalHotKeys {
                 FinderActuator.perform(.pastePath)
             }
         }
+        register(settings.mergeWindows, id: 5) {
+            Task { @MainActor in
+                FinderActuator.perform(.mergeWindows)
+            }
+        }
     }
 
     private func unregister() {

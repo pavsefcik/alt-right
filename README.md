@@ -9,6 +9,7 @@ right-click submenu.
 | **Paste Path** | `⇧⌥⌘G` — opens Finder's *Go to Folder* sheet and pastes the clipboard path |
 | **Go to Folder** | `⇧⌘G` — opens Finder's *Go to Folder* sheet |
 | **Connect to Server** | `⌘K` — opens Finder's *Connect to Server* dialog |
+| **Merge All Windows** | `⌃⌘M` — folds every Finder window into one window as tabs |
 | **Search Bookmarks** | `⌥⌘B` — opens the all-in-one Bookmarks/History window |
 | **History** | `⌃⌘H` — opens the same window on copied paths |
 
@@ -25,7 +26,8 @@ how often and how recently you opened them — not with the newest one. One clic
 row immediately, double-click opens it; type to filter, `↑`/`↓` move, `Return` opens,
 `Esc` closes and puts focus back where it was. Add and Edit happen inline, and Delete turns
 the rows into multi-select circles so several can go at once. Right-click the icon for Copy
-Path, Paste Path, Go to Folder, Connect to Server, Settings, Search for Updates and Quit.
+Path, Paste Path, Go to Folder, Connect to Server, Merge All Windows, Settings, Search for
+Updates and Quit.
 
 **iCloud Drive, Google Drive, Dropbox and friends never show third-party Finder menus** —
 that is an Apple limitation. Use the menu-bar icon there; the commands work the same way.
@@ -72,14 +74,18 @@ that is an Apple limitation. Use the menu-bar icon there; the commands work the 
   marked with `≈`; the tooltip says so, and for NCS it also names the nearest RAL swatch.
   NCS hues are validated against the NCS circle (`Y→R→B→G→Y`), so `S 1050-Y90B` is not a
   colour. RAL Design (`RAL 210 60 30`) is a different system and is not supported.
-- Nothing opens in a second window. The panel closes on Esc or as soon as you switch to
-  another app; double-click or Return opens a row.
+- **Open in a window or a tab** — *Settings › Opening* decides where a folder from a
+  bookmark or from copied paths lands. The default is a new Finder window; choose **New
+  tab** to add it to the frontmost Finder window instead. A first folder still opens a
+  window when no Finder window exists, and tabs need Accessibility (otherwise Alt Right
+  falls back to a window).
+- The panel stays a single surface: opening a row hands focus to Finder or the browser. It
+  closes on Esc or as soon as you switch to another app; double-click or Return opens a row.
 - The `⌥⌘B`, `⌃⌘H` and `⇧⌥⌘G` shortcuts are registered as system-wide hot keys, so they
   work while Finder (or any other app) is frontmost — not just while a menu is open.
 - In **Settings → Shortcuts**, click a combination and press a new one. The change is
   live immediately (global hot key, menu-bar menu, and the Finder submenu); **Restore
-  Defaults** brings the three combinations above back. Paste Path is configurable like the
-  other two.
+  Defaults** brings the standard combinations back.
 - Data lives at `~/Library/Application Support/Alt Right/` (`bookmarks.json`,
   `history.json`) — plain JSON, never uploaded anywhere.
 
@@ -106,7 +112,8 @@ Then:
    pluginkit -e use -i com.pavel.altright.FinderSync
    killall Finder
    ```
-2. **Accessibility** — needed so the app can press `⇧⌘G` and `⌘K`. Open **Alt Right** from the
+2. **Accessibility** — needed so the app can press `⇧⌘G` and `⌘K`, reach Finder's *Merge All
+   Windows* and *New Tab* commands, and open folders in tabs. Open **Alt Right** from the
    menu bar and press **Grant…**, then turn the switch on by hand (macOS does not allow
    apps to do that).
 3. **Automation** — macOS asks once when *Add Bookmark* reads the current Finder selection.

@@ -1,5 +1,31 @@
 import AppKit
 
+/// Where a folder opened from a bookmark or from the copied-path history goes.
+/// URLs are unaffected: the browser decides what a new page means.
+enum OpenMode: String, CaseIterable, Identifiable {
+    case newWindow
+    case newTab
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .newWindow: return L("New window")
+        case .newTab: return L("New tab")
+        }
+    }
+}
+
+enum OpenPreference {
+    static let defaultsKey = "openFoldersInNewTabs"
+
+    /// New window unless the user chose tabs in Settings.
+    static var mode: OpenMode {
+        OpenMode(rawValue: UserDefaults.standard.string(forKey: defaultsKey) ?? "")
+            ?? .newWindow
+    }
+}
+
 @MainActor
 enum BookmarkOpener {
     /// Returns whether something was actually opened. A missing path shows its
@@ -46,6 +72,13 @@ enum BookmarkOpener {
         }
 
         if isDirectory.boolValue {
+            // A tab needs an existing Finder window (and Accessibility to drive
+            // Finder's New Tab command). Fall back to a window otherwise — not
+            // opening at all would be worse than the wrong container.
+            if OpenPreference.mode == .newTab,
+               FinderActuator.openFolderInNewTab(url) {
+                return true
+            }
             NSWorkspace.shared.open(url)
         } else {
             NSWorkspace.shared.activateFileViewerSelecting([url])

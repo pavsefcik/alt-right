@@ -6,6 +6,7 @@ enum FinderAction: String, CaseIterable {
     case pastePath = "paste-path"
     case goToFolder = "go-to-folder"
     case connectToServer = "connect-to-server"
+    case mergeWindows = "merge-windows"
     case openSettings = "open-settings"
 
     var url: URL? {

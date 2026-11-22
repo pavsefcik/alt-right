@@ -9,6 +9,7 @@ enum ShortcutAction: String, CaseIterable, Codable, Hashable {
     case searchBookmarks
     case history
     case pastePath
+    case mergeWindows
 
     var title: String {
         switch self {
@@ -16,6 +17,7 @@ enum ShortcutAction: String, CaseIterable, Codable, Hashable {
         case .searchBookmarks: return L("Bookmarks")
         case .history: return L("Copied Paths")
         case .pastePath: return L("Paste Path")
+        case .mergeWindows: return L("Merge All Windows")
         }
     }
 }
@@ -61,6 +63,7 @@ struct ShortcutSettings: Codable, Equatable {
     var searchBookmarks: Shortcut
     var history: Shortcut
     var pastePath: Shortcut
+    var mergeWindows: Shortcut
 
     static let standard = ShortcutSettings(
         addBookmark: Shortcut(
@@ -82,6 +85,11 @@ struct ShortcutSettings: Codable, Equatable {
             keyCode: UInt32(kVK_ANSI_G),
             modifiers: UInt32(cmdKey | optionKey | shiftKey),
             key: "G"
+        ),
+        mergeWindows: Shortcut(
+            keyCode: UInt32(kVK_ANSI_M),
+            modifiers: UInt32(cmdKey | controlKey),
+            key: "M"
         )
     )
 
@@ -90,23 +98,26 @@ struct ShortcutSettings: Codable, Equatable {
         case searchBookmarks
         case history
         case pastePath
+        case mergeWindows
     }
 
     init(
         addBookmark: Shortcut,
         searchBookmarks: Shortcut,
         history: Shortcut,
-        pastePath: Shortcut
+        pastePath: Shortcut,
+        mergeWindows: Shortcut
     ) {
         self.addBookmark = addBookmark
         self.searchBookmarks = searchBookmarks
         self.history = history
         self.pastePath = pastePath
+        self.mergeWindows = mergeWindows
     }
 
-    /// Tolerant decoding: old files predate `addBookmark` and `pastePath`.
-    /// Missing keys fall back to the standard combination instead of throwing
-    /// the whole settings file away.
+    /// Tolerant decoding: old files predate `addBookmark`, `pastePath` and
+    /// `mergeWindows`. Missing keys fall back to the standard combination
+    /// instead of throwing the whole settings file away.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let standard = ShortcutSettings.standard
@@ -126,6 +137,10 @@ struct ShortcutSettings: Codable, Equatable {
             Shortcut.self,
             forKey: .pastePath
         ) ?? standard.pastePath
+        mergeWindows = try container.decodeIfPresent(
+            Shortcut.self,
+            forKey: .mergeWindows
+        ) ?? standard.mergeWindows
     }
 
     subscript(action: ShortcutAction) -> Shortcut {
@@ -135,6 +150,7 @@ struct ShortcutSettings: Codable, Equatable {
             case .searchBookmarks: return searchBookmarks
             case .history: return history
             case .pastePath: return pastePath
+            case .mergeWindows: return mergeWindows
             }
         }
         set {
@@ -143,6 +159,7 @@ struct ShortcutSettings: Codable, Equatable {
             case .searchBookmarks: searchBookmarks = newValue
             case .history: history = newValue
             case .pastePath: pastePath = newValue
+            case .mergeWindows: mergeWindows = newValue
             }
         }
     }
