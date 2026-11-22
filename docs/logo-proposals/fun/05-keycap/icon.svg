@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#B69BFF"/>
+      <stop offset="0.48" stop-color="#8459F5"/>
+      <stop offset="1" stop-color="#4B1FBE"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.3" cy="0.05" r="0.8">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.32"/>
+      <stop offset="0.65" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cap" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.62" stop-color="#F3EEFF"/>
+      <stop offset="1" stop-color="#DCD0FF"/>
+    </linearGradient>
+    <linearGradient id="skirt" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#C9B4FF"/>
+      <stop offset="1" stop-color="#8C63F0"/>
+    </linearGradient>
+    <filter id="sh" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#210A5C" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#glow)"/>
+
+  <g transform="rotate(-8 512 512)" filter="url(#sh)">
+    <!-- the key that is being pressed: skirt below, top face above -->
+    <rect x="298" y="352" width="428" height="376" rx="104" fill="url(#skirt)"/>
+    <rect x="298" y="318" width="428" height="356" rx="100" fill="url(#cap)"/>
+    <rect x="298" y="318" width="428" height="356" rx="100" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="4"/>
+
+    <!-- right-angle arrow, engraved -->
+    <g fill="none" stroke="#6B3BE8" stroke-width="62" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 398 606 V 506 A 48 48 0 0 1 446 458 H 512"/>
+      <path d="M 516 410 L 610 458 L 516 506 Z" fill="#6B3BE8" stroke-width="30"/>
+    </g>
+  </g>
+
+  <!-- sparkle -->
+  <path d="M 236 268 l 8 22 22 8 -22 8 -8 22 -8 -22 -22 -8 22 -8 z" fill="#F0E4FF" opacity="0.9"/>
+</svg>

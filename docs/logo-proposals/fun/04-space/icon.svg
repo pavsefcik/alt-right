@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#1B2150"/>
+      <stop offset="0.55" stop-color="#0D1130"/>
+      <stop offset="1" stop-color="#06081B"/>
+    </linearGradient>
+    <radialGradient id="nebula" cx="0.72" cy="0.2" r="0.75">
+      <stop offset="0" stop-color="#7A5BFF" stop-opacity="0.45"/>
+      <stop offset="0.6" stop-color="#3B2A9E" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nebula2" cx="0.2" cy="0.85" r="0.6">
+      <stop offset="0" stop-color="#2FD3C0" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="sh" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="10" stdDeviation="24" flood-color="#8FA6FF" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#nebula)"/>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#nebula2)"/>
+
+  <!-- stars -->
+  <g fill="#ffffff">
+    <circle cx="212" cy="240" r="4" opacity="0.9"/>
+    <circle cx="286" cy="180" r="2.6" opacity="0.6"/>
+    <circle cx="820" cy="216" r="3.4" opacity="0.8"/>
+    <circle cx="768" cy="322" r="2.2" opacity="0.55"/>
+    <circle cx="880" cy="452" r="2.8" opacity="0.7"/>
+    <circle cx="188" cy="520" r="2.4" opacity="0.5"/>
+    <circle cx="164" cy="700" r="3.6" opacity="0.75"/>
+    <circle cx="300" cy="812" r="3" opacity="0.6"/>
+    <circle cx="500" cy="864" r="2.4" opacity="0.5"/>
+    <circle cx="700" cy="820" r="3.2" opacity="0.7"/>
+    <circle cx="860" cy="700" r="2.6" opacity="0.6"/>
+    <circle cx="836" cy="820" r="2" opacity="0.45"/>
+    <circle cx="240" cy="380" r="2" opacity="0.45"/>
+    <circle cx="640" cy="188" r="2.6" opacity="0.65"/>
+  </g>
+
+  <g filter="url(#sh)">
+    <!-- A -->
+    <path d="M 402 300 L 566 728 L 242 728 Z" fill="#ffffff"/>
+    <circle cx="366" cy="592" r="21" fill="#0B0E24"/>
+    <circle cx="446" cy="592" r="21" fill="#0B0E24"/>
+
+    <!-- R -->
+    <path d="M 598 300 L 598 728 L 806 514 Z" fill="#ffffff"/>
+    <path d="M 598 640 L 690 728 L 598 728 Z" fill="#ffffff"/>
+    <circle cx="660" cy="452" r="19" fill="#0B0E24"/>
+    <circle cx="702" cy="492" r="19" fill="#0B0E24"/>
+  </g>
+</svg>

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#FFC46B"/>
+      <stop offset="0.5" stop-color="#FF9A2E"/>
+      <stop offset="1" stop-color="#E26A0B"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.3" cy="0.06" r="0.8">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="0.65" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#FFFDF8"/>
+      <stop offset="1" stop-color="#FFEDD4"/>
+    </linearGradient>
+    <linearGradient id="back" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#FFD9A8"/>
+      <stop offset="1" stop-color="#F6B36A"/>
+    </linearGradient>
+    <filter id="sh" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#7A2E00" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#glow)"/>
+
+  <g transform="rotate(-4 512 520)">
+    <!-- back of the folder, so it still reads "folder" at a glance -->
+    <path d="M 300 366 H 480 L 542 434 H 742 Q 778 434 778 470 V 660 Q 778 696 742 696 H 300 Q 264 696 264 660 V 402 Q 264 366 300 366 Z"
+          fill="url(#back)" opacity="0.9"/>
+
+    <g filter="url(#sh)">
+      <path d="M 288 424 H 466 L 528 492 H 730 Q 766 492 766 528 V 688 Q 766 724 730 724 H 288 Q 252 724 252 688 V 460 Q 252 424 288 424 Z"
+            fill="url(#paper)"/>
+    </g>
+
+    <!-- face -->
+    <circle cx="418" cy="588" r="27" fill="#5A3210"/>
+    <circle cx="556" cy="588" r="27" fill="#5A3210"/>
+    <circle cx="426" cy="579" r="8" fill="#ffffff" opacity="0.85"/>
+    <circle cx="564" cy="579" r="8" fill="#ffffff" opacity="0.85"/>
+    <path d="M 456 648 Q 487 682 518 648" fill="none" stroke="#5A3210" stroke-width="20"
+          stroke-linecap="round"/>
+    <circle cx="354" cy="632" r="23" fill="#FF8A5B" opacity="0.5"/>
+    <circle cx="620" cy="632" r="23" fill="#FF8A5B" opacity="0.5"/>
+  </g>
+
+  <!-- sparkle -->
+  <path d="M 776 288 l 10 26 26 10 -26 10 -10 26 -10 -26 -26 -10 26 -10 z" fill="#FFF6C9" opacity="0.95"/>
+</svg>

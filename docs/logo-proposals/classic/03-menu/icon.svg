@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#E9EEFA"/>
+      <stop offset="0.55" stop-color="#DCE4F5"/>
+      <stop offset="1" stop-color="#C4D1EA"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#F4F7FE"/>
+    </linearGradient>
+    <filter id="sh" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="20" flood-color="#22315C" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+
+  <!-- menu bar strip -->
+  <g filter="url(#sh)">
+    <rect x="252" y="268" width="520" height="100" rx="50" fill="url(#card)"/>
+    <circle cx="326" cy="318" r="18" fill="#2E63F0"/>
+    <rect x="370" y="305" width="170" height="26" rx="13" fill="#4B5878" opacity="0.6"/>
+    <rect x="588" y="305" width="118" height="26" rx="13" fill="#4B5878" opacity="0.32"/>
+  </g>
+
+  <!-- dropdown menu, hanging from the strip -->
+  <g filter="url(#sh)">
+    <rect x="340" y="356" width="380" height="344" rx="46" fill="url(#card)"/>
+  </g>
+  <rect x="348" y="390" width="364" height="66" rx="22" fill="#2E63F0"/>
+  <rect x="378" y="411" width="152" height="24" rx="12" fill="#ffffff" opacity="0.95"/>
+  <path d="M 648 411 L 674 423 L 648 435" fill="none" stroke="#ffffff" stroke-width="14"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="378" y="484" width="200" height="26" rx="13" fill="#4B5878" opacity="0.6"/>
+  <rect x="378" y="552" width="252" height="26" rx="13" fill="#4B5878" opacity="0.45"/>
+  <rect x="378" y="620" width="164" height="26" rx="13" fill="#4B5878" opacity="0.32"/>
+</svg>

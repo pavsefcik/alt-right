@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0.12" y1="0" x2="0.88" y2="1">
+      <stop offset="0" stop-color="#4F8DFF"/>
+      <stop offset="0.5" stop-color="#2E63F0"/>
+      <stop offset="1" stop-color="#183AA8"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.02" r="0.9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="sh" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#08184A" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#glow)"/>
+
+  <!-- right-angle arrow: shaft rises, turns right, points right -->
+  <g filter="url(#sh)" transform="translate(-33,-20)">
+    <path d="M 398 744 V 480 A 96 96 0 0 1 494 384 H 612" fill="none"
+          stroke="#ffffff" stroke-width="92" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 584 296 L 716 384 L 584 472 Z" fill="#ffffff" stroke="#ffffff"
+          stroke-width="44" stroke-linejoin="round"/>
+  </g>
+</svg>
