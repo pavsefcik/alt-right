@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 
 enum Shell {
@@ -21,6 +22,68 @@ enum Shell {
 
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         return String(decoding: data, as: UTF8.self)
+    }
+}
+
+/// Spotlight on macOS 26 is an overlay: neither `NSWorkspace.frontmostApplication`
+/// nor `CGWindowList` reports it. The system-wide focused accessibility element
+/// is the reliable signal; the other checks stay as fallbacks.
+enum SpotlightDetector {
+    static func isActive() -> Bool {
+        if isSpotlight(NSWorkspace.shared.frontmostApplication) {
+            return true
+        }
+        if focusedElementBelongsToSpotlight() {
+            return true
+        }
+        return spotlightWindowIsVisible()
+    }
+
+    static func isSpotlight(_ app: NSRunningApplication?) -> Bool {
+        guard let app else { return false }
+        let bundleID = app.bundleIdentifier?.lowercased() ?? ""
+        let name = app.localizedName?.lowercased() ?? ""
+        return bundleID.contains("spotlight") || name.contains("spotlight")
+    }
+
+    private static func focusedElementBelongsToSpotlight() -> Bool {
+        guard Permissions.hasAccessibility else { return false }
+
+        let systemWide = AXUIElementCreateSystemWide()
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(
+            systemWide,
+            kAXFocusedUIElementAttribute as CFString,
+            &value
+        )
+        guard result == .success, let element = value else { return false }
+
+        var pid: pid_t = 0
+        guard AXUIElementGetPid(element as! AXUIElement, &pid) == .success, pid > 0 else {
+            return false
+        }
+        return isSpotlight(NSRunningApplication(processIdentifier: pid))
+    }
+
+    /// Older macOS versions expose the Spotlight overlay as a window owned by
+    /// Spotlight. macOS 26 no longer does, but keeping the check costs little.
+    private static func spotlightWindowIsVisible() -> Bool {
+        guard let windows = CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements],
+            kCGNullWindowID
+        ) as? [[String: Any]] else {
+            return false
+        }
+        for window in windows {
+            let owner = (window[kCGWindowOwnerName as String] as? String)?.lowercased() ?? ""
+            guard owner.contains("spotlight") else { continue }
+            let layer = window[kCGWindowLayer as String] as? Int ?? 0
+            let alpha = window[kCGWindowAlpha as String] as? Double ?? 0
+            if layer > 0, alpha > 0.01 {
+                return true
+            }
+        }
+        return false
     }
 }
 
@@ -108,6 +171,27 @@ struct SearchField: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1)
         )
+    }
+}
+
+/// Small transient confirmation shown over a panel after Copy. It never takes
+/// clicks: the list stays usable while the message fades away.
+struct CopyConfirmationToast: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 11, weight: .semibold))
+            Text(L("Copied"))
+                .font(.system(size: 12, weight: .medium))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(
+            Capsule().fill(Color(nsColor: .labelColor).opacity(0.9))
+        )
+        .foregroundStyle(Color(nsColor: .windowBackgroundColor))
+        .shadow(color: .black.opacity(0.2), radius: 8, y: 3)
+        .allowsHitTesting(false)
     }
 }
 

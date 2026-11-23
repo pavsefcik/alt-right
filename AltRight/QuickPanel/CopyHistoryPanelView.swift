@@ -12,12 +12,21 @@ struct CopyHistoryPanelView: View {
 
     @State private var lastClickID: CopyEntry.ID?
     @State private var lastClickAt = Date.distantPast
+    @State private var showCopied = false
+    @State private var copyToastTask: DispatchWorkItem?
 
     var body: some View {
         VStack(spacing: 0) {
             header
             content
             footer
+        }
+        .overlay(alignment: .bottom) {
+            if showCopied {
+                CopyConfirmationToast()
+                    .padding(.bottom, 52)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
         }
         .onAppear {
             model.reset()
@@ -220,11 +229,26 @@ struct CopyHistoryPanelView: View {
         copy(entry)
     }
 
-    /// Copying is the errand: put the text back on the pasteboard and close, so
-    /// the next ⌘V lands where the user was working.
+    /// Copying leaves the panel open, like a clipboard manager: the user may
+    /// want to copy another entry next. A short confirmation says it worked.
     private func copy(_ entry: CopyEntry) {
         ClipboardWriter.write(entry.text)
-        StatusItemController.shared.closePanel()
+        showCopiedConfirmation()
+    }
+
+    private func showCopiedConfirmation() {
+        copyToastTask?.cancel()
+        withAnimation(.easeOut(duration: 0.12)) {
+            showCopied = true
+        }
+
+        let task = DispatchWorkItem {
+            withAnimation(.easeIn(duration: 0.18)) {
+                showCopied = false
+            }
+        }
+        copyToastTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: task)
     }
 }
 

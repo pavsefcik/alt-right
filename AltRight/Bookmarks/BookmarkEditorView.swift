@@ -13,7 +13,6 @@ struct BookmarkEditorView: View {
     @State private var title: String
     @State private var description: String
     @State private var errorMessage: String?
-    @FocusState private var pathFocused: Bool
 
     init(
         store: BookmarkStore,
@@ -44,9 +43,6 @@ struct BookmarkEditorView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(nsColor: .windowBackgroundColor))
-        .onAppear {
-            pathFocused = existing == nil
-        }
         .onChange(of: path) { newValue in
             guard existing == nil else { return }
             if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -64,12 +60,11 @@ struct BookmarkEditorView: View {
 
             labelled(L("Folder, file, or URL")) {
                 HStack(spacing: 8) {
-                    TextField(L("Folder, file, or URL"), text: $path)
-                        .multilineTextAlignment(.trailing)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 12, design: .monospaced))
-                        .labelsHidden()
-                        .focused($pathFocused)
+                    PathTextField(
+                        text: $path,
+                        wantsInitialFocus: existing == nil,
+                        accessibilityLabel: L("Folder, file, or URL")
+                    )
                         .overlay(
                             RoundedRectangle(cornerRadius: 5, style: .continuous)
                                 .strokeBorder(
@@ -266,5 +261,107 @@ struct BookmarkEditorView: View {
         }
 
         AppDelegate.log("browse chose \(chosen)")
+    }
+}
+
+/// A plain left-aligned field that keeps the *end* of a too-long path visible.
+/// SwiftUI's TextField clips at the start when it is not being edited, which
+/// hides the file name — the one part of the path the user needs to recognise.
+private struct PathTextField: NSViewRepresentable {
+    @Binding var text: String
+    var wantsInitialFocus: Bool
+    var accessibilityLabel: String
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    func makeNSView(context: Context) -> PathField {
+        let field = PathField()
+        field.delegate = context.coordinator
+        field.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        field.bezelStyle = .roundedBezel
+        field.isBordered = true
+        field.drawsBackground = true
+        field.usesSingleLineMode = true
+        field.lineBreakMode = .byClipping
+        field.cell?.wraps = false
+        field.cell?.isScrollable = true
+        field.setAccessibilityLabel(accessibilityLabel)
+        field.stringValue = text
+        field.wantsInitialFocus = wantsInitialFocus
+        field.translatesAutoresizingMaskIntoConstraints = false
+        field.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return field
+    }
+
+    func updateNSView(_ field: PathField, context: Context) {
+        context.coordinator.text = $text
+        field.setAccessibilityLabel(accessibilityLabel)
+        if field.stringValue != text {
+            field.stringValue = text
+        }
+        field.updateOverflowAlignment()
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var text: Binding<String>
+
+        init(text: Binding<String>) {
+            self.text = text
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? PathField else { return }
+            text.wrappedValue = field.stringValue
+            field.updateOverflowAlignment()
+        }
+
+        func controlTextDidBeginEditing(_ notification: Notification) {
+            (notification.object as? PathField)?.updateOverflowAlignment()
+        }
+
+        func controlTextDidEndEditing(_ notification: Notification) {
+            (notification.object as? PathField)?.updateOverflowAlignment()
+        }
+    }
+}
+
+private final class PathField: NSTextField {
+    var wantsInitialFocus = false
+    private var tookInitialFocus = false
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard wantsInitialFocus, !tookInitialFocus, window != nil else { return }
+        tookInitialFocus = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let window = self.window else { return }
+            window.makeFirstResponder(self)
+            if let editor = self.currentEditor() {
+                let end = NSRange(location: (self.stringValue as NSString).length, length: 0)
+                editor.selectedRange = end
+                editor.scrollRangeToVisible(end)
+            }
+        }
+    }
+
+    override func layout() {
+        super.layout()
+        updateOverflowAlignment()
+    }
+
+    /// Left-aligned while the path fits; right-aligned only when it does not,
+    /// so the beginning stays where the user expects and the end stays visible.
+    func updateOverflowAlignment() {
+        guard currentEditor() == nil else {
+            alignment = .left
+            return
+        }
+        let available = bounds.width - 10
+        guard available > 0 else { return }
+        let width = attributedStringValue.size().width
+        alignment = width > available ? .right : .left
     }
 }

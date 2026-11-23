@@ -10,6 +10,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// SwiftUI owns the delegate instance, so keep a reference to it for the UI.
     private(set) static weak var shared: AppDelegate?
+    private var workspaceActivationObserver: NSObjectProtocol?
+    private var spotlightTimer: Timer?
 
     override init() {
         super.init()
@@ -46,6 +48,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         StatusModel.shared.start()
         GlobalHotKeys.shared.start()
         StatusItemController.shared.install()
+        workspaceActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  SpotlightDetector.isSpotlight(app) else {
+                return
+            }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.closeForSpotlight()
+            }
+        }
+
+        startSpotlightWatch()
+    }
+
+    /// Spotlight in macOS 26 takes focus without deactivating or activating an
+    /// app, so the only dependable signal is polling the focused AX element
+    /// while Alt Right has a window on screen.
+    private func startSpotlightWatch() {
+        guard spotlightTimer == nil else { return }
+        let timer = Timer(timeInterval: 0.2, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.pollSpotlight() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        spotlightTimer = timer
+    }
+
+    private func stopSpotlightWatch() {
+        spotlightTimer?.invalidate()
+        spotlightTimer = nil
+    }
+
+    private func pollSpotlight() {
+        if SpotlightDetector.isActive() {
+            closeForSpotlight()
+            return
+        }
+        // Nothing of ours is on screen: stop touching the AX system until the
+        // next activation brings a window back.
+        let hasVisibleWindow = NSApp.windows.contains { $0.isVisible }
+        if !hasVisibleWindow {
+            stopSpotlightWatch()
+        }
+    }
+
+    func closeForSpotlight() {
+        Self.log("Spotlight appeared; closing Alt Right")
+        stopSpotlightWatch()
+        StatusItemController.shared.closePanel()
+        NSApp.hide(nil)
     }
 
     /// The app is an accessory (LSUIElement), so it cannot rely on a SwiftUI
@@ -83,6 +138,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Settings window, for example). Claim it again whenever we come forward.
     func applicationDidBecomeActive(_ notification: Notification) {
         installURLEventHandler()
+        startSpotlightWatch()
+    }
+
+    func applicationDidResignActive(_ notification: Notification) {
+        stopSpotlightWatch()
     }
 
     @objc private func handleAddBookmarkNotification(_ notification: Notification) {

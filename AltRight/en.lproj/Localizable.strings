@@ -102,6 +102,7 @@
 "Quit Alt Right" = "Quit Alt Right";
 "%@ already uses that shortcut." = "%@ already uses that shortcut.";
 "Clear" = "Clear";
+"Copied" = "Copied";
 "Press ← to switch" = "Press ← to switch";
 "Press → to switch" = "Press → to switch";
 "GitHub did not return a release." = "GitHub did not return a release.";

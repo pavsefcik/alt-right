@@ -12,12 +12,21 @@ struct HistoryPanelView: View {
 
     @State private var lastClickID: HistoryEntry.ID?
     @State private var lastClickAt = Date.distantPast
+    @State private var showCopied = false
+    @State private var copyToastTask: DispatchWorkItem?
 
     var body: some View {
         VStack(spacing: 0) {
             header
             content
             footer
+        }
+        .overlay(alignment: .bottom) {
+            if showCopied {
+                CopyConfirmationToast()
+                    .padding(.bottom, 52)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
         }
         .onAppear {
             model.reset()
@@ -204,8 +213,22 @@ struct HistoryPanelView: View {
     }
 
     private func copy(_ entry: HistoryEntry) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(entry.path, forType: .string)
+        ClipboardWriter.write(entry.path)
+        showCopiedConfirmation()
+    }
+
+    private func showCopiedConfirmation() {
+        copyToastTask?.cancel()
+        withAnimation(.easeOut(duration: 0.12)) {
+            showCopied = true
+        }
+
+        let task = DispatchWorkItem {
+            withAnimation(.easeIn(duration: 0.18)) {
+                showCopied = false
+            }
+        }
+        copyToastTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: task)
     }
 }

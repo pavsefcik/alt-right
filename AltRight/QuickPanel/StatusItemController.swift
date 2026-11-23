@@ -26,7 +26,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private var restoreFocusOnClose = false
     private var keyMonitor: Any?
     private var globalMouseMonitor: Any?
-    private var resignObserver: NSObjectProtocol?
+    private var frontmostAppObserver: NSObjectProtocol?
     private var isShowingMenu = false
 
     /// A menu opened from inside the panel (the sort pop-up) tracks in its own
@@ -101,15 +101,36 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             }
         })
 
-        resignObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didResignActiveNotification,
+        // Switching to another app is an unambiguous dismissal. Watching the
+        // workspace instead of NSApplication.didResignActive avoids the
+        // spurious resigns AppKit sends while a button or panel control is
+        // handling its click — those were closing the panel mid-action.
+        frontmostAppObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
+        ) { [weak self] notification in
             Task { @MainActor in
-                self?.requestClickAwayDismissal()
+                guard let self, self.popover.isShown else { return }
+                guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else {
+                    return
+                }
+                if app.processIdentifier == ProcessInfo.processInfo.processIdentifier {
+                    return
+                }
+                if SpotlightDetector.isSpotlight(app) {
+                    self.closeForSpotlight()
+                    return
+                }
+                self.requestClickAwayDismissal()
             }
         }
+    }
+
+    private func closeForSpotlight() {
+        AppDelegate.shared?.closeForSpotlight()
+        closePanel()
+        NSApp.hide(nil)
     }
 
     // MARK: - Click handling
@@ -213,9 +234,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// opened from inside the panel is still tracking, in which case the click
     /// belongs to the menu and the request waits until the menu closes.
     private func requestClickAwayDismissal() {
-        // The inline add/edit form must survive the activation changes caused
-        // by Finder and by macOS's first-run window handling.
-        guard popover.isShown, NSApp.modalWindow == nil, model.editor == nil else { return }
+        guard popover.isShown, NSApp.modalWindow == nil else { return }
         if panelMenuIsTracking {
             dismissalDeferredByMenu = true
             return
@@ -229,19 +248,23 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         guard keyMonitor == nil else { return }
 
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self,
-                  self.popover.isShown,
-                  NSApp.modalWindow == nil,
+            guard let self, self.popover.isShown else { return event }
+            // Spotlight's shortcut can be delivered to the active app before
+            // the overlay activates, so dismiss our UI on the shortcut too.
+            if event.keyCode == 49, event.modifierFlags.contains(.command) {
+                self.closeForSpotlight()
+                return event
+            }
+            guard NSApp.modalWindow == nil,
                   event.window === self.popover.contentViewController?.view.window else {
                 return event
             }
 
-            // While the inline form is open its own fields and Save/Cancel
-            // shortcuts own the keyboard. Escape only leaves the form.
+            // The editor owns its field keys and Save shortcut; Escape closes
+            // the whole panel just like it does from the bookmark list.
             if self.model.editor != nil {
                 if event.keyCode == 53 {
-                    self.model.dismissEditor()
-                    self.model.requestFocus()
+                    self.closePanel(restoringFocus: true)
                     return nil
                 }
                 return event
