@@ -212,6 +212,13 @@ struct ContentView: View {
                 action: Permissions.openExtensionsSettings
             )
 
+            if !status.extensionEnabled {
+                Text(L("In System Settings, turn on Alt Right under Extensions › Finder. If it is already on, quit and reopen Finder."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Divider()
 
             StatusRow(

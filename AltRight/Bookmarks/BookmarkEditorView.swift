@@ -62,9 +62,10 @@ struct BookmarkEditorView: View {
             Text(existing == nil ? L("Add Bookmark") : L("Edit Bookmark"))
                 .font(.system(size: 17, weight: .semibold))
 
-            labelled(L("Path or URL")) {
+            labelled(L("Folder, file, or URL")) {
                 HStack(spacing: 8) {
-                    TextField(L("Path or URL"), text: $path)
+                    TextField(L("Folder, file, or URL"), text: $path)
+                        .multilineTextAlignment(.trailing)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(size: 12, design: .monospaced))
                         .labelsHidden()

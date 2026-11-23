@@ -213,7 +213,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// opened from inside the panel is still tracking, in which case the click
     /// belongs to the menu and the request waits until the menu closes.
     private func requestClickAwayDismissal() {
-        guard popover.isShown, NSApp.modalWindow == nil else { return }
+        // The inline add/edit form must survive the activation changes caused
+        // by Finder and by macOS's first-run window handling.
+        guard popover.isShown, NSApp.modalWindow == nil, model.editor == nil else { return }
         if panelMenuIsTracking {
             dismissalDeferredByMenu = true
             return
@@ -484,9 +486,6 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         let settings = plainItem(L("Settings…"), action: #selector(openSettings))
         settings.keyEquivalent = ","
         settings.keyEquivalentModifierMask = [.command]
-        // macOS decorates a “Settings…” item with a gear on recent systems;
-        // an explicitly blank image keeps the requested text-only menu.
-        settings.image = NSImage(size: NSSize(width: 16, height: 16))
         menu.addItem(settings)
 
         menu.addItem(plainItem(L("Search for Updates…"), action: #selector(searchForUpdates)))

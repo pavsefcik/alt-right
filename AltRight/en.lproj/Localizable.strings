@@ -12,7 +12,7 @@
 "Some Bookmarks Could Not Be Added" = "Some Bookmarks Could Not Be Added";
 "Add Bookmark" = "Add Bookmark";
 "Edit Bookmark" = "Edit Bookmark";
-"Path or URL" = "Path or URL";
+"Folder, file, or URL" = "Folder, file, or URL";
 "Browse…" = "Browse…";
 "Title" = "Title";
 "Description" = "Description";
@@ -51,6 +51,7 @@
 "Enabled" = "Enabled";
 "Off" = "Off";
 "Turn On…" = "Turn On…";
+"In System Settings, turn on Alt Right under Extensions › Finder. If it is already on, quit and reopen Finder." = "In System Settings, turn on Alt Right under Extensions › Finder. If it is already on, quit and reopen Finder.";
 "Accessibility" = "Accessibility";
 "Granted" = "Granted";
 "Needed" = "Needed";
