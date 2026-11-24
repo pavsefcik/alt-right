@@ -25,18 +25,20 @@ enum Shell {
     }
 }
 
-/// Spotlight on macOS 26 is an overlay: neither `NSWorkspace.frontmostApplication`
-/// nor `CGWindowList` reports it. The system-wide focused accessibility element
-/// is the reliable signal; the other checks stay as fallbacks.
+/// Spotlight on macOS 26/27 is an overlay: `NSWorkspace.frontmostApplication`
+/// often keeps reporting the app underneath. The system-wide focused
+/// accessibility element is the reliable signal; the window check stays as a
+/// last resort for Macs without Accessibility permission.
+///
+/// Every check here is deliberately strict. A loose "a Spotlight window exists"
+/// test closed the panel a fraction of a second after it opened while the
+/// overlay was merely fading out — exactly the press-sensitive behaviour that
+/// made the app feel like it was running away.
 enum SpotlightDetector {
+    /// Definitive: Spotlight itself is frontmost, or it owns the keyboard.
     static func isActive() -> Bool {
-        if isSpotlight(NSWorkspace.shared.frontmostApplication) {
-            return true
-        }
-        if focusedElementBelongsToSpotlight() {
-            return true
-        }
-        return spotlightWindowIsVisible()
+        isSpotlight(NSWorkspace.shared.frontmostApplication)
+            || focusedElementBelongsToSpotlight()
     }
 
     static func isSpotlight(_ app: NSRunningApplication?) -> Bool {
@@ -65,9 +67,12 @@ enum SpotlightDetector {
         return isSpotlight(NSRunningApplication(processIdentifier: pid))
     }
 
-    /// Older macOS versions expose the Spotlight overlay as a window owned by
-    /// Spotlight. macOS 26 no longer does, but keeping the check costs little.
-    private static func spotlightWindowIsVisible() -> Bool {
+    /// Best-effort signal for Macs without Accessibility permission. Only a
+    /// window that is fully drawn and wide enough to be the search overlay
+    /// counts: the overlay keeps small, nearly transparent helper windows
+    /// around, and treating those as "Spotlight is open" dismissed the panel for
+    /// no reason. Callers must confirm it over more than one sample.
+    static func windowIsVisible() -> Bool {
         guard let windows = CGWindowListCopyWindowInfo(
             [.optionOnScreenOnly, .excludeDesktopElements],
             kCGNullWindowID
@@ -79,7 +84,9 @@ enum SpotlightDetector {
             guard owner.contains("spotlight") else { continue }
             let layer = window[kCGWindowLayer as String] as? Int ?? 0
             let alpha = window[kCGWindowAlpha as String] as? Double ?? 0
-            if layer > 0, alpha > 0.01 {
+            let bounds = window[kCGWindowBounds as String] as? [String: Any]
+            let width = (bounds?["Width"] as? Double) ?? 0
+            if layer > 0, alpha > 0.9, width >= 200 {
                 return true
             }
         }

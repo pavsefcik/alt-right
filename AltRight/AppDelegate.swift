@@ -10,8 +10,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// SwiftUI owns the delegate instance, so keep a reference to it for the UI.
     private(set) static weak var shared: AppDelegate?
-    private var workspaceActivationObserver: NSObjectProtocol?
     private var spotlightTimer: Timer?
+    /// Consecutive polls that reported Spotlight as active. One frame in the
+    /// middle of the overlay's animation must not be enough to dismiss.
+    private var spotlightConfirmations = 0
 
     override init() {
         super.init()
@@ -20,6 +22,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     static func log(_ message: String) {
         NSLog("Alt Right: \(message)")
+        recordEvent("· \(message)")
+    }
+
+    /// Where “why did the panel close?” is recorded. Console.app does not
+    /// reliably show an accessory app's NSLog output, so panel presentations
+    /// and dismissals are appended to a small plain-text file:
+    ///
+    ///   ~/Library/Application Support/Alt Right/close-log.txt
+    ///
+    /// One line per event: ISO timestamp, then what happened. The file is
+    /// trimmed to the last 200 lines so it cannot grow without bound.
+    static func recordEvent(_ event: String) {
+        let directory = BookmarkStore.defaultFileURL.deletingLastPathComponent()
+        let file = directory.appendingPathComponent("close-log.txt")
+        let stamp = ISO8601DateFormatter().string(from: Date())
+
+        var lines = (try? String(contentsOf: file, encoding: .utf8))?
+            .split(separator: "\n")
+            .map(String.init) ?? []
+        lines.append("\(stamp)  \(event)")
+        if lines.count > 200 {
+            lines.removeFirst(lines.count - 200)
+        }
+
+        try? FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        try? (lines.joined(separator: "\n") + "\n")
+            .write(to: file, atomically: true, encoding: .utf8)
+    }
+
+    static func recordDismissal(_ reason: String) {
+        NSLog("Alt Right: closePanel: \(reason)")
+        recordEvent("closed: \(reason)")
     }
 
     func installURLEventHandler() {
@@ -48,20 +85,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         StatusModel.shared.start()
         GlobalHotKeys.shared.start()
         StatusItemController.shared.install()
-        workspaceActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                  SpotlightDetector.isSpotlight(app) else {
-                return
-            }
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.closeForSpotlight()
-            }
-        }
 
         startSpotlightWatch()
     }
@@ -78,29 +101,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         spotlightTimer = timer
     }
 
+    /// Called whenever the panel is put on screen. The app can already be active
+    /// (the panel is an accessory app's popover), so `applicationDidBecomeActive`
+    /// does not necessarily fire.
+    func ensureSpotlightWatch() {
+        guard StatusItemController.shared.isPanelShown else { return }
+        startSpotlightWatch()
+    }
+
     private func stopSpotlightWatch() {
         spotlightTimer?.invalidate()
         spotlightTimer = nil
+        spotlightConfirmations = 0
     }
 
     private func pollSpotlight() {
+        // Only the panel needs this watch. The settings window can stay where
+        // it is, and with nothing of ours on screen there is no reason to keep
+        // touching the AX system.
+        guard StatusItemController.shared.isPanelShown else {
+            stopSpotlightWatch()
+            return
+        }
+
+        // A file panel or an alert of ours owns the screen; Spotlight cannot be
+        // in front of it, and closing under a modal would strand the user.
+        guard NSApp.modalWindow == nil else {
+            spotlightConfirmations = 0
+            return
+        }
+
+        // Definitive: the overlay owns the keyboard. No need to wait.
         if SpotlightDetector.isActive() {
+            spotlightConfirmations = 0
             closeForSpotlight()
             return
         }
-        // Nothing of ours is on screen: stop touching the AX system until the
-        // next activation brings a window back.
-        let hasVisibleWindow = NSApp.windows.contains { $0.isVisible }
-        if !hasVisibleWindow {
-            stopSpotlightWatch()
+
+        // Fallback without Accessibility permission: a fully drawn Spotlight
+        // window. This one needs a second sample, because a window can be in
+        // the middle of an animation.
+        guard SpotlightDetector.windowIsVisible() else {
+            spotlightConfirmations = 0
+            return
         }
+        spotlightConfirmations += 1
+        guard spotlightConfirmations >= 2 else { return }
+        spotlightConfirmations = 0
+        closeForSpotlight()
     }
 
     func closeForSpotlight() {
-        Self.log("Spotlight appeared; closing Alt Right")
+        guard StatusItemController.shared.isPanelShown else { return }
+        Self.log("Spotlight appeared; closing the panel")
         stopSpotlightWatch()
-        StatusItemController.shared.closePanel()
-        NSApp.hide(nil)
+        // Close the panel only. Hiding the app (the old behaviour) deactivated
+        // it while the Spotlight overlay was still animating in, and macOS 26
+        // then dismissed Spotlight as well — both flickered and disappeared.
+        StatusItemController.shared.closePanel(reason: "spotlight")
     }
 
     /// The app is an accessory (LSUIElement), so it cannot rely on a SwiftUI
@@ -115,23 +173,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         window.title = "Alt Right"
         window.isReleasedWhenClosed = false
+        // Open on the Desktop (Space) the user is on, not on the one the
+        // window was last used in.
+        window.collectionBehavior = [.moveToActiveSpace]
 
         let hosting = NSHostingView(rootView: ContentView())
         window.contentView = hosting
         let ideal = hosting.fittingSize
         window.setContentSize(NSSize(width: 480, height: max(ideal.height, 320)))
-        window.center()
         window.setFrameAutosaveName("AltRightSettings")
         return window
     }()
 
     func showSettings() {
         Self.log("showSettings")
-        StatusItemController.shared.closePanel()
+        StatusItemController.shared.closePanel(reason: "showSettings")
         AppActivation.activate()
         NSApp.activate(ignoringOtherApps: true)
         StatusModel.shared.refresh()
+        Self.place(settingsWindow, on: Self.activeScreen())
         settingsWindow.makeKeyAndOrderFront(nil)
+    }
+
+    /// The screen the user is working on: the one under the pointer, which is
+    /// also the screen whose Space was active when the menu-bar item was
+    /// clicked. Falls back to the main screen.
+    private static func activeScreen() -> NSScreen? {
+        let mouse = NSEvent.mouseLocation
+        return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) }
+            ?? NSScreen.main
+    }
+
+    /// Center a window on `screen` when it is not already there. The autosaved
+    /// frame wins otherwise, so a window the user moved keeps its position.
+    private static func place(_ window: NSWindow, on screen: NSScreen?) {
+        guard let screen else { return }
+        if let current = window.screen, current.frame.equalTo(screen.frame) {
+            return
+        }
+
+        let visible = screen.visibleFrame
+        let size = NSSize(
+            width: min(window.frame.width, visible.width - 20),
+            height: min(window.frame.height, visible.height - 20)
+        )
+        let origin = NSPoint(
+            x: visible.midX - size.width / 2,
+            y: visible.midY - size.height / 2
+        )
+        window.setFrame(NSRect(origin: origin, size: size), display: true)
     }
 
     /// SwiftUI may replace the Apple-event handler when a scene appears (the
@@ -142,6 +232,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidResignActive(_ notification: Notification) {
+        // Keep polling while the panel is still on screen: not every activation
+        // change is a dismissal (Control Center and Notification Center take
+        // focus for a moment), and Spotlight can still appear over the panel.
+        guard !StatusItemController.shared.isPanelShown else { return }
         stopSpotlightWatch()
     }
 

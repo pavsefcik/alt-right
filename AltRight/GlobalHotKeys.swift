@@ -75,7 +75,9 @@ final class GlobalHotKeys {
 
         register(settings.addBookmark, id: 4) {
             Task { @MainActor in
-                BookmarkCoordinator.shared.presentNewBookmark()
+                // The hot key is used from wherever the user is working, so
+                // saving hands focus back instead of leaving the panel up.
+                BookmarkCoordinator.shared.presentNewBookmark(closeAfterSave: true)
             }
         }
         register(settings.searchBookmarks, id: 1) {

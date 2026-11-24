@@ -23,8 +23,15 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     /// The app that was frontmost when the panel opened, so Escape and a second
     /// click on the icon put focus back where the user came from.
     private var previousApp: NSRunningApplication?
+
+    /// The app the user was in when they reached for the menu bar item. The
+    /// add form uses it to decide whether Finder’s selection is the current
+    /// context. Kept after the panel closes so the right-click menu’s Add
+    /// Bookmark sees the same thing.
+    private(set) var applicationBeforePanel: NSRunningApplication?
     private var restoreFocusOnClose = false
     private var keyMonitor: Any?
+    private var localMouseMonitor: Any?
     private var globalMouseMonitor: Any?
     private var frontmostAppObserver: NSObjectProtocol?
     private var isShowingMenu = false
@@ -61,10 +68,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         let hosting = NSHostingController(
             rootView: QuickPanelView(
                 model: model,
-                // Saving the inline form finishes the errand: close the panel
-                // and hand focus back to whatever the user came from.
+                // Only a form opened by Finder closes the panel on save; the
+                // panel's own + Add returns to the list with the new row.
                 onEditorSaved: { [weak self] in
-                    self?.closePanel(restoringFocus: true)
+                    self?.closePanel(restoringFocus: true, reason: "editor saved (from Finder)")
                 }
             )
         )
@@ -97,7 +104,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
                 guard self.dismissalDeferredByMenu else { return }
                 self.dismissalDeferredByMenu = false
                 // The held-back click really was outside the panel.
-                self.closePanel()
+                self.closePanel(reason: "click away (after menu)")
             }
         })
 
@@ -118,25 +125,35 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
                 if app.processIdentifier == ProcessInfo.processInfo.processIdentifier {
                     return
                 }
+                AppDelegate.log(
+                    "activation: \(app.localizedName ?? "?") "
+                    + "[\(app.bundleIdentifier ?? "?")] "
+                    + "policy=\(app.activationPolicy.rawValue)"
+                )
                 if SpotlightDetector.isSpotlight(app) {
-                    self.closeForSpotlight()
+                    AppDelegate.shared?.closeForSpotlight()
                     return
                 }
-                self.requestClickAwayDismissal()
+                // UI agents (Control Center, Notification Center, the Dock,
+                // …) take activation for a moment while the user goes on with
+                // Alt Right. Only a regular app taking over is a dismissal.
+                guard app.activationPolicy == .regular else { return }
+                self.requestClickAwayDismissal(reason: "app activated: \(app.localizedName ?? "?")")
             }
         }
     }
 
-    private func closeForSpotlight() {
-        AppDelegate.shared?.closeForSpotlight()
-        closePanel()
-        NSApp.hide(nil)
-    }
+    var isPanelShown: Bool { popover.isShown }
 
     // MARK: - Click handling
 
     @objc private func statusItemClicked(_ sender: Any?) {
         guard !isShowingMenu else { return }
+
+        if let front = NSWorkspace.shared.frontmostApplication,
+           front.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            applicationBeforePanel = front
+        }
 
         let isRightClick = NSApp.currentEvent?.type == .rightMouseUp
         if isRightClick {
@@ -148,7 +165,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     private func togglePanel() {
         if popover.isShown {
-            closePanel(restoringFocus: true)
+            closePanel(restoringFocus: true, reason: "status item clicked again")
             return
         }
         openPanelIfNeeded()
@@ -157,6 +174,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func openPanelIfNeeded() {
         guard !popover.isShown else { return }
         previousApp = NSWorkspace.shared.frontmostApplication
+        applicationBeforePanel = previousApp
         model.prepareForShow()
         presentPopover()
     }
@@ -175,8 +193,56 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             preferredEdge: .minY
         )
         popover.contentViewController?.view.window?.makeKey()
+        let front = NSWorkspace.shared.frontmostApplication?.localizedName ?? "?"
+        let buttonRect: String
+        if let button = statusItem?.button, let window = button.window {
+            buttonRect = "\(window.convertToScreen(button.convert(button.bounds, to: nil)))"
+        } else {
+            buttonRect = "none"
+        }
+        AppDelegate.recordEvent(
+            "opened; active=\(NSApp.isActive) front=\(front) "
+            + "key=\(popover.contentViewController?.view.window?.isKeyWindow == true) "
+            + "button=\(buttonRect)"
+        )
+
+        // Bringing an accessory app forward from a status-item click can settle
+        // a beat after the popover appears. If the window is not key by the
+        // time the user's first click lands, that click only activates the app
+        // and the control is never pressed. Re-assert once on the next runloop.
+        reassertActivation()
+
         installKeyMonitor()
+        installLocalMouseMonitor()
         installDismissMonitors()
+        AppDelegate.shared?.ensureSpotlightWatch()
+    }
+
+    /// Opening the panel from the status item does not make the app active by
+    /// itself, and `NSApp.activate` inside the status item's mouse-up action is
+    /// not always honoured. The popover then appears in an *inactive* window:
+    /// the user's first click only activates the window (or lands in the app
+    /// underneath), so “+ Add” seemed to close the panel instead of opening the
+    /// form. Re-assert activation and key status on the next runloop turns
+    /// until it sticks.
+    private func reassertActivation(attempt: Int = 0) {
+        guard popover.isShown else { return }
+
+        NSApp.activate(ignoringOtherApps: true)
+        popover.contentViewController?.view.window?.makeKey()
+
+        let window = popover.contentViewController?.view.window
+        let isReady = NSApp.isActive && window?.isKeyWindow == true
+        AppDelegate.log(
+            "activate attempt \(attempt): active=\(NSApp.isActive) "
+            + "key=\(window?.isKeyWindow == true) "
+            + "front=\(NSWorkspace.shared.frontmostApplication?.localizedName ?? "?")"
+        )
+
+        guard !isReady, attempt < 8 else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.reassertActivation(attempt: attempt + 1)
+        }
     }
 
     // MARK: - Opening the panel for the app
@@ -199,11 +265,15 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         model.requestFocus()
     }
 
-    func showPanelAddingBookmark(initialPath: String) {
+    func showPanelAddingBookmark(initialPath: String, closeAfterSave: Bool = false) {
         openPanelIfNeeded()
         // Keep whatever face is underneath: adding a bookmark from History
         // and cancelling returns to History, not to Bookmarks.
-        model.presentEditor(existing: nil, initialPath: initialPath)
+        model.presentEditor(
+            existing: nil,
+            initialPath: initialPath,
+            closeAfterSave: closeAfterSave
+        )
         model.requestFocus()
     }
 
@@ -221,25 +291,29 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     /// Closes the panel without restoring focus first, so opening a bookmark
     /// can hand focus to Finder/the browser instead of yanking it back.
-    func closePanel(restoringFocus: Bool = false) {
+    ///
+    /// `reason` is logged so a report of "the panel closed by itself" can be
+    /// matched to the exact code path (Console.app, filter for "Alt Right").
+    func closePanel(restoringFocus: Bool = false, reason: String = #function) {
         restoreFocusOnClose = restoringFocus
         guard popover.isShown else {
             restoreFocusOnClose = false
             return
         }
+        AppDelegate.recordDismissal(reason)
         popover.performClose(nil)
     }
 
     /// Dismissal from a click that landed outside the panel — unless a menu
     /// opened from inside the panel is still tracking, in which case the click
     /// belongs to the menu and the request waits until the menu closes.
-    private func requestClickAwayDismissal() {
+    private func requestClickAwayDismissal(reason: String = "click away (mouse)") {
         guard popover.isShown, NSApp.modalWindow == nil else { return }
         if panelMenuIsTracking {
             dismissalDeferredByMenu = true
             return
         }
-        closePanel()
+        closePanel(reason: reason)
     }
 
     // MARK: - Keyboard
@@ -249,30 +323,26 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.popover.isShown else { return event }
-            // Spotlight's shortcut can be delivered to the active app before
-            // the overlay activates, so dismiss our UI on the shortcut too.
-            if event.keyCode == 49, event.modifierFlags.contains(.command) {
-                self.closeForSpotlight()
-                return event
-            }
             guard NSApp.modalWindow == nil,
                   event.window === self.popover.contentViewController?.view.window else {
                 return event
             }
 
-            // The editor owns its field keys and Save shortcut; Escape closes
-            // the whole panel just like it does from the bookmark list.
-            if self.model.editor != nil {
-                if event.keyCode == 53 {
-                    self.closePanel(restoringFocus: true)
-                    return nil
-                }
-                return event
+            // Escape moves one step up, like dismissing a sheet: the inline
+            // editor goes back to the list, delete mode goes back to the
+            // list, and a filtered list is cleared first. Only the plain list
+            // closes the panel.
+            if event.keyCode == 53 {
+                self.stepBack()
+                return nil
             }
 
-            if event.keyCode == 53 { // Escape
-                self.closePanel(restoringFocus: true)
-                return nil
+            // The inline form owns its keys: Tab moves between fields, Return
+            // presses the default button (or inserts a newline in the
+            // description), the arrows move the caret. The list shortcuts must
+            // not run underneath a form.
+            if self.model.editor != nil {
+                return event
             }
 
             // Tab and → move to the next face. It is a local monitor, so
@@ -353,6 +423,31 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         keyMonitor = nil
     }
 
+    /// One step up on Escape. A panel never jumps straight out of a form: the
+    /// editor, delete mode and a non-empty search are each dismissed before
+    /// Escape is allowed to close the panel.
+    private func stepBack() {
+        if model.editor != nil {
+            model.dismissEditor()
+            model.requestFocus()
+            return
+        }
+
+        if model.deleteMode {
+            model.endDeleteMode()
+            model.requestFocus()
+            return
+        }
+
+        if !model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            model.query = ""
+            model.requestFocus()
+            return
+        }
+
+        closePanel(restoringFocus: true, reason: "escape")
+    }
+
     /// True while the panel's search field is editing text: the arrows then
     /// belong to the caret, not to the face switching.
     private func searchFieldHasText(in window: NSWindow?) -> Bool {
@@ -361,6 +456,32 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     // MARK: - Click-away dismissal
+
+    /// Diagnostic only: records mouse-downs that are delivered to Alt Right, so
+    /// a log can tell "the click never reached the panel" from "the click was
+    /// inside and something still dismissed it".
+    private func installLocalMouseMonitor() {
+        guard localMouseMonitor == nil else { return }
+
+        localMouseMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { event in
+            let window = event.window
+            AppDelegate.log(
+                "local mouse-down at \(event.locationInWindow) "
+                + "window=\(window?.title ?? "-") "
+                + "popover=\(window === StatusItemController.shared.popover.contentViewController?.view.window)"
+            )
+            return event
+        }
+    }
+
+    private func removeLocalMouseMonitor() {
+        if let localMouseMonitor {
+            NSEvent.removeMonitor(localMouseMonitor)
+        }
+        localMouseMonitor = nil
+    }
 
     /// A click in another app (or on the desktop) never reaches a local
     /// monitor, and `.applicationDefined` means AppKit will not dismiss the
@@ -373,7 +494,21 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.requestClickAwayDismissal()
+                guard let self, self.popover.isShown else { return }
+                // A global monitor should only see clicks outside Alt Right,
+                // but during an activation hand-off it can report a click that
+                // actually landed in the panel. If the pointer is over the
+                // popover, the click belongs to it.
+                if let frame = self.popover.contentViewController?.view.window?.frame,
+                   frame.contains(NSEvent.mouseLocation) {
+                    AppDelegate.log("global mouse-down inside the panel; ignored")
+                    return
+                }
+                let front = NSWorkspace.shared.frontmostApplication?.localizedName ?? "?"
+                AppDelegate.log(
+                    "global mouse-down; front=\(front) active=\(NSApp.isActive)"
+                )
+                self.requestClickAwayDismissal()
             }
         }
     }
@@ -386,10 +521,12 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     private func openSelected() {
-        guard model.editor == nil, let bookmark = model.selectedResult else {
+        // Delete mode is a selection mode: Return must not open anything.
+        guard model.editor == nil, !model.deleteMode,
+              let bookmark = model.selectedResult else {
             return
         }
-        closePanel()
+        closePanel(reason: "open bookmark")
         model.open(
             bookmark,
             onEdit: { [weak self] in
@@ -406,7 +543,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             NSSound.beep()
             return
         }
-        closePanel()
+        closePanel(reason: "open copied path")
         BookmarkOpener.open(path: entry.path)
     }
 
@@ -418,7 +555,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             return
         }
         ClipboardWriter.write(entry.text)
-        closePanel()
+        closePanel(reason: "copy entry")
     }
 
     // MARK: - NSPopoverDelegate
@@ -429,9 +566,19 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     func popoverDidClose(_ notification: Notification) {
         removeKeyMonitor()
+        removeLocalMouseMonitor()
         removeDismissMonitors()
         panelMenuIsTracking = false
         dismissalDeferredByMenu = false
+
+        // Never leave a half-finished form or delete mode behind: the next
+        // presentation starts on the list, from a clean state.
+        if model.editor != nil {
+            model.dismissEditor()
+        }
+        if model.deleteMode {
+            model.endDeleteMode()
+        }
 
         if restoreFocusOnClose {
             restoreFocusOnClose = false
@@ -452,7 +599,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         // item; the old `popUpContextMenu(with:)` path flickered on the first
         // right-click because it started tracking on mouse-up.
         if popover.isShown {
-            closePanel()
+            closePanel(reason: "right-click menu")
         }
 
         item.menu = buildClassicMenu()
@@ -556,21 +703,24 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     // MARK: - Menu actions
 
     @objc private func openSettings() {
-        closePanel()
+        closePanel(reason: "menu: settings")
         DispatchQueue.main.async {
             AppDelegate.shared?.showSettings()
         }
     }
 
     @objc private func searchForUpdates() {
-        closePanel()
+        closePanel(reason: "menu: search for updates")
         UpdateChecker.check()
     }
 
     @objc private func addBookmarkFromMenu() {
-        closePanel()
+        closePanel(reason: "menu: add bookmark")
         DispatchQueue.main.async {
-            BookmarkCoordinator.shared.presentNewBookmark()
+            BookmarkCoordinator.shared.presentNewBookmark(
+                finderContext: StatusItemController.shared.applicationBeforePanel,
+                closeAfterSave: true
+            )
         }
     }
 

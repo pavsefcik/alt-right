@@ -8,24 +8,32 @@ struct BookmarkEditorView: View {
     let initialPath: String
     let onSave: (Bookmark) -> Void
     let onCancel: () -> Void
+    /// Jumps to the bookmark that already uses the typed path, instead of
+    /// leaving the form stuck on “already exists”.
+    let onReveal: (Bookmark) -> Void
 
     @State private var path: String
     @State private var title: String
     @State private var description: String
     @State private var errorMessage: String?
+    @State private var duplicate: Bookmark?
+    /// A fast double Return must not save the same bookmark twice.
+    @State private var didSave = false
 
     init(
         store: BookmarkStore,
         existing: Bookmark?,
         initialPath: String,
         onSave: @escaping (Bookmark) -> Void,
-        onCancel: @escaping () -> Void
+        onCancel: @escaping () -> Void,
+        onReveal: @escaping (Bookmark) -> Void
     ) {
         self.store = store
         self.existing = existing
         self.initialPath = initialPath
         self.onSave = onSave
         self.onCancel = onCancel
+        self.onReveal = onReveal
 
         let path = existing?.path ?? initialPath
         let title = existing?.title ?? (path.isEmpty ? "" : Bookmark.automaticTitle(for: path))
@@ -43,7 +51,14 @@ struct BookmarkEditorView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(nsColor: .windowBackgroundColor))
+        .onAppear {
+            AppDelegate.recordEvent("editor appeared")
+        }
         .onChange(of: path) { newValue in
+            // Editing again clears the complaint from the last save attempt.
+            errorMessage = nil
+            duplicate = nil
+
             guard existing == nil else { return }
             if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 title = Bookmark.automaticTitle(for: newValue)
@@ -124,7 +139,19 @@ struct BookmarkEditorView: View {
 
     @ViewBuilder
     private var status: some View {
-        if let errorMessage {
+        if let duplicate {
+            HStack(spacing: 8) {
+                Text(errorMessage ?? L("A bookmark for this path already exists."))
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button(L("Go to Existing Bookmark")) {
+                    onReveal(duplicate)
+                }
+                .buttonStyle(PanelButtonStyle())
+            }
+        } else if let errorMessage {
             Text(errorMessage)
                 .font(.caption)
                 .foregroundStyle(.red)
@@ -135,6 +162,13 @@ struct BookmarkEditorView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// The path in storable form, or nil while the input is not a bookmarkable
+    /// path. The default button is disabled exactly when this is nil, so a
+    /// hopeless Return does nothing instead of producing an error message.
+    private var normalizedPath: String? {
+        Bookmark.normalizedPath(path)
     }
 
     /// Where the bookmark points, in the user's words, before saving.
@@ -160,6 +194,17 @@ struct BookmarkEditorView: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
+            // ⌘↩ commits even from the multi-line description, where Return
+            // must keep inserting newlines. The button is invisible; it only
+            // carries the shortcut. It sits before the spacer so it has no
+            // effect on the layout.
+            Button("") { save() }
+                .keyboardShortcut(.return, modifiers: .command)
+                .disabled(normalizedPath == nil)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+                .accessibilityHidden(true)
+
             Spacer(minLength: 0)
 
             Button(L("Cancel")) {
@@ -172,6 +217,7 @@ struct BookmarkEditorView: View {
                 save()
             }
             .keyboardShortcut(.defaultAction)
+            .disabled(normalizedPath == nil)
             .buttonStyle(PanelButtonStyle())
         }
         .padding(.horizontal, 16)
@@ -179,7 +225,8 @@ struct BookmarkEditorView: View {
     }
 
     private func save() {
-        guard let normalized = Bookmark.normalizedPath(path) else {
+        guard !didSave else { return }
+        guard let normalized = normalizedPath else {
             errorMessage = L("Enter an absolute path, a file URL, an SMB URL, or an HTTP(S) URL.")
             return
         }
@@ -190,9 +237,9 @@ struct BookmarkEditorView: View {
             : trimmedTitle
         let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if let existing,
-           existing.path != normalized,
-           store.hasPath(normalized) {
+        if existing?.path != normalized,
+           let clash = store.bookmarks.first(where: { $0.path == normalized }) {
+            duplicate = clash
             errorMessage = L("A bookmark for this path already exists.")
             return
         }
@@ -216,6 +263,7 @@ struct BookmarkEditorView: View {
             } else {
                 _ = try store.upsert(bookmark)
             }
+            didSave = true
             onSave(bookmark)
         } catch {
             errorMessage = error.localizedDescription
@@ -340,9 +388,11 @@ private final class PathField: NSTextField {
             guard let self, let window = self.window else { return }
             window.makeFirstResponder(self)
             if let editor = self.currentEditor() {
-                let end = NSRange(location: (self.stringValue as NSString).length, length: 0)
-                editor.selectedRange = end
-                editor.scrollRangeToVisible(end)
+                // Focused text fields select their contents, so typing replaces
+                // the path Finder handed over instead of appending to it.
+                let all = NSRange(location: 0, length: (self.stringValue as NSString).length)
+                editor.selectedRange = all
+                editor.scrollRangeToVisible(NSRange(location: all.length, length: 0))
             }
         }
     }

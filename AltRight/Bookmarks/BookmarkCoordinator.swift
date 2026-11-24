@@ -40,28 +40,76 @@ final class BookmarkCoordinator {
         StatusItemController.shared.showPanelHistory()
     }
 
-    func presentNewBookmark(initialPath: String = "", useFinderSelection: Bool = false) {
+    func presentNewBookmark(
+        initialPath: String = "",
+        useFinderSelection: Bool = true,
+        finderContext: NSRunningApplication? = nil,
+        closeAfterSave: Bool = false
+    ) {
         let path = initialPath.isEmpty
-            ? preferredNewBookmarkPath(useFinderSelection: useFinderSelection)
+            ? preferredNewBookmarkPath(
+                useFinderSelection: useFinderSelection,
+                context: finderContext
+            )
             : initialPath
-        StatusItemController.shared.showPanelAddingBookmark(initialPath: path)
+        StatusItemController.shared.showPanelAddingBookmark(
+            initialPath: path,
+            closeAfterSave: closeAfterSave
+        )
     }
 
     /// What a new bookmark should start with when the caller has no path of
-    /// its own (the panel’s + Add button). Finder’s current selection wins,
-    /// exactly like the Finder context-menu Add Bookmark.
+    /// its own (the panel’s + Add button).
+    ///
+    /// Like the Finder context menu’s “Add as Bookmark”, this offers the item
+    /// currently selected in Finder — but only when the user is actually
+    /// working in Finder (see `finderSelection`). Otherwise the last path Alt
+    /// Right saw and then the clipboard are used.
     func suggestedNewBookmarkPath() -> String {
-        preferredNewBookmarkPath(useFinderSelection: true)
+        // The + Add button lives in a panel that is already open, so the app
+        // the panel was opened from is the user's context.
+        if let selected = finderSelection(when: StatusItemController.shared.applicationBeforePanel) {
+            rememberLastPath([selected])
+            return selected
+        }
+        return lastPickedPath ?? clipboardPath() ?? ""
+    }
+
+    /// Finder’s live selection, but only when `context` really is Finder. A
+    /// selection left behind in a Finder window hours ago is not what “Add
+    /// Bookmark” should offer, so the caller passes the app the user came from.
+    ///
+    /// Querying Finder is an Apple event; it does not bring Finder forward, so
+    /// it cannot dismiss the panel. It takes ~50 ms once warm.
+    func finderSelection(when context: NSRunningApplication?) -> String? {
+        guard context?.bundleIdentifier == "com.apple.finder" else { return nil }
+
+        let started = Date()
+        let paths = FinderSelection.selectedPaths()
+        AppDelegate.log(
+            String(
+                format: "Finder selection: %@ (%.0f ms)",
+                paths.isEmpty ? "<none>" : paths.joined(separator: " | "),
+                Date().timeIntervalSince(started) * 1000
+            )
+        )
+        return paths.first
     }
 
     /// What the editor should start with when no path was handed over.
     ///
-    /// The menu-bar item and the Add Bookmark hot key first ask Finder what is
-    /// selected right now; that is the folder or file the user just chose. The
-    /// “+” button inside the bookmarks window is an in-app action, so it keeps
-    /// using the last path Alt Right saw and then the clipboard.
-    private func preferredNewBookmarkPath(useFinderSelection: Bool) -> String {
-        if useFinderSelection, let selected = FinderSelection.selectedPaths().first {
+    /// The menu-bar item, the Add Bookmark hot key and the panel’s + Add all
+    /// ask Finder what is selected right now, provided the user came from
+    /// Finder; that is the folder or file they just chose. Otherwise the last
+    /// path Alt Right saw and then the clipboard are used.
+    private func preferredNewBookmarkPath(
+        useFinderSelection: Bool,
+        context: NSRunningApplication?
+    ) -> String {
+        // A caller that has its own context (the status-item menu) passes it;
+        // otherwise the frontmost app is the context (the Add Bookmark hot key).
+        let app = context ?? NSWorkspace.shared.frontmostApplication
+        if useFinderSelection, let selected = finderSelection(when: app) {
             rememberLastPath([selected])
             return selected
         }
@@ -123,7 +171,8 @@ final class BookmarkCoordinator {
         rememberLastPath(normalized)
 
         if normalized.count == 1, let path = normalized.first {
-            presentNewBookmark(initialPath: path)
+            // Finder asked for this form: saving goes back to Finder.
+            presentNewBookmark(initialPath: path, closeAfterSave: true)
             return
         }
 

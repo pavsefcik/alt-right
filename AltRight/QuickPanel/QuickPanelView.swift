@@ -7,14 +7,12 @@ import SwiftUI
 struct QuickPanelView: View {
     @ObservedObject var model: QuickPanelModel
 
-    /// Called after the inline form saves. Saving is the end of the errand, so
-    /// the panel closes instead of dropping back to the search list.
+    /// Called after a form that was opened by Finder saves. That is the end of
+    /// the errand, so the panel closes; a form opened here stays open.
     var onEditorSaved: () -> Void = {}
 
     @FocusState private var searchFocused: Bool
 
-    @State private var deleting = false
-    @State private var deleteSelection = Set<Bookmark.ID>()
     @State private var lastClickID: Bookmark.ID?
     @State private var lastClickAt = Date.distantPast
 
@@ -25,12 +23,26 @@ struct QuickPanelView: View {
                     store: model.bookmarkStore,
                     existing: request.bookmark,
                     initialPath: request.initialPath,
-                    onSave: { _ in
+                    onSave: { bookmark in
+                        // A form opened by Finder is done once it saves; one
+                        // opened from the list returns to the list with the
+                        // saved row selected, like any native list window.
+                        let closing = request.closeAfterSave
                         model.dismissEditor()
-                        onEditorSaved()
+                        if closing {
+                            onEditorSaved()
+                        } else {
+                            model.focus(bookmark)
+                            focusSearchField()
+                        }
                     },
                     onCancel: {
                         model.dismissEditor()
+                        focusSearchField()
+                    },
+                    onReveal: { bookmark in
+                        model.dismissEditor()
+                        model.focus(bookmark)
                         focusSearchField()
                     }
                 )
@@ -127,10 +139,10 @@ struct QuickPanelView: View {
 
     private func row(for bookmark: Bookmark) -> some View {
         let selected = bookmark.id == model.selectedID
-        let checked = deleteSelection.contains(bookmark.id)
+        let checked = model.deleteSelection.contains(bookmark.id)
 
         return HStack(spacing: 10) {
-            if deleting {
+            if model.deleteMode {
                 Image(systemName: checked ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(checked ? Color.accentColor : Color.secondary)
@@ -171,7 +183,7 @@ struct QuickPanelView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .listRowHighlight(selected: selected && !deleting)
+        .listRowHighlight(selected: selected && !model.deleteMode)
         .contentShape(Rectangle())
         // Selection is immediate; a second click on the same row inside the
         // double-click interval opens it. Detecting the pair here (instead of
@@ -187,7 +199,7 @@ struct QuickPanelView: View {
             }
         )
         .contextMenu {
-            if !deleting {
+            if !model.deleteMode {
                 Button(L("Open")) { open(bookmark) }
                 Button(L("Edit")) { edit(bookmark) }
                 Button(bookmark.pinned ? L("Unpin") : L("Pin")) {
@@ -201,7 +213,7 @@ struct QuickPanelView: View {
                 }
                 Divider()
                 Button(L("Delete"), role: .destructive) {
-                    beginDeleteMode(with: bookmark)
+                    model.beginDeleteMode(with: bookmark)
                 }
             }
         }
@@ -231,7 +243,7 @@ struct QuickPanelView: View {
 
     @ViewBuilder
     private var footer: some View {
-        if deleting {
+        if model.deleteMode {
             deleteFooter
         } else {
             HStack(spacing: 14) {
@@ -250,7 +262,7 @@ struct QuickPanelView: View {
                 .help(L("Edit Bookmark"))
 
                 Button(L("Delete")) {
-                    beginDeleteMode(with: model.selectedResult)
+                    model.beginDeleteMode(with: model.selectedResult)
                 }
                 .disabled(model.selectedResult == nil)
                 .help(L("Delete"))
@@ -284,16 +296,16 @@ struct QuickPanelView: View {
 
     private var deleteFooter: some View {
         HStack(spacing: 14) {
-            Button(deleteButtonTitle) {
-                performDelete()
+            Button(model.deleteButtonTitle) {
+                model.performDelete()
             }
-            .disabled(deleteSelection.isEmpty)
+            .disabled(model.deleteSelection.isEmpty)
 
-            Button(allSelected ? L("Deselect All") : L("Select All")) {
-                if allSelected {
-                    deleteSelection.removeAll()
+            Button(model.allSelected ? L("Deselect All") : L("Select All")) {
+                if model.allSelected {
+                    model.deleteSelection.removeAll()
                 } else {
-                    deleteSelection = Set(model.results.map(\.id))
+                    model.deleteSelection = Set(model.results.map(\.id))
                 }
             }
             .disabled(model.results.isEmpty)
@@ -309,20 +321,9 @@ struct QuickPanelView: View {
         .padding(.vertical, 11)
     }
 
-    private var deleteButtonTitle: String {
-        if deleteSelection.isEmpty { return L("Delete") }
-        return String(format: L("Delete %d"), deleteSelection.count)
-    }
-
-    /// True once every visible row is ticked: the Select All button then offers
-    /// the way back out instead of doing nothing.
-    private var allSelected: Bool {
-        !model.results.isEmpty && deleteSelection.count == model.results.count
-    }
-
     private func handleClick(_ bookmark: Bookmark) {
-        if deleting {
-            toggleDelete(bookmark)
+        if model.deleteMode {
+            model.toggleDelete(bookmark)
             return
         }
 
@@ -344,28 +345,8 @@ struct QuickPanelView: View {
 
     // MARK: - Delete mode
 
-    private func beginDeleteMode(with bookmark: Bookmark?) {
-        deleting = true
-        deleteSelection = Set([bookmark?.id].compactMap { $0 })
-    }
-
-    private func toggleDelete(_ bookmark: Bookmark) {
-        if deleteSelection.contains(bookmark.id) {
-            deleteSelection.remove(bookmark.id)
-        } else {
-            deleteSelection.insert(bookmark.id)
-        }
-    }
-
-    private func performDelete() {
-        guard !deleteSelection.isEmpty else { return }
-        try? model.bookmarkStore.remove(paths: deleteSelection)
-        endDeleteMode()
-    }
-
     private func endDeleteMode() {
-        deleting = false
-        deleteSelection.removeAll()
+        model.endDeleteMode()
         lastClickID = nil
         lastClickAt = .distantPast
     }
@@ -381,7 +362,7 @@ struct QuickPanelView: View {
     }
 
     private func openSelected() {
-        guard !deleting, let bookmark = model.selectedResult else {
+        guard !model.deleteMode, let bookmark = model.selectedResult else {
             NSSound.beep()
             return
         }
@@ -389,7 +370,7 @@ struct QuickPanelView: View {
     }
 
     private func open(_ bookmark: Bookmark) {
-        StatusItemController.shared.closePanel()
+        StatusItemController.shared.closePanel(reason: "open bookmark (view)")
         model.open(
             bookmark,
             onEdit: {

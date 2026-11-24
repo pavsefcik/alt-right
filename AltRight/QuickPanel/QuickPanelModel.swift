@@ -17,6 +17,12 @@ final class QuickPanelModel: ObservableObject {
         let id = UUID()
         let bookmark: Bookmark?
         let initialPath: String
+
+        /// A form opened by Finder's “Add Bookmark” closes the panel after
+        /// saving: the user came from Finder, so finishing means going back.
+        /// A form opened from inside the panel stays open and shows the saved
+        /// row in the list, like any native list window.
+        let closeAfterSave: Bool
     }
 
     /// Typed into the search field. Filtering runs on every keystroke; at
@@ -31,6 +37,12 @@ final class QuickPanelModel: ObservableObject {
 
     /// Non-nil while the inline form replaces the list in this panel.
     @Published var editor: EditorRequest?
+
+    /// Delete mode lives here rather than in the view: Escape has to be able to
+    /// step out of it before it closes the panel, and switching faces must
+    /// always end it.
+    @Published private(set) var deleteMode = false
+    @Published var deleteSelection = Set<Bookmark.ID>()
 
     /// Bookmarks or History — both faces share this window. The choice is
     /// remembered so the next launch opens on the face the user left behind.
@@ -115,6 +127,7 @@ final class QuickPanelModel: ObservableObject {
         // Bookmarks/History commands override this right afterwards.
         mode = Self.savedMode()
         editor = nil
+        endDeleteMode()
         query = ""
         history.reset()
         copyHistory.reset()
@@ -139,6 +152,7 @@ final class QuickPanelModel: ObservableObject {
     /// the left arrow walking the ring backwards.
     func show(_ mode: Mode) {
         editor = nil
+        endDeleteMode()
         self.mode = mode
 
         switch mode {
@@ -176,13 +190,37 @@ final class QuickPanelModel: ObservableObject {
         show(previousMode)
     }
 
-    func presentEditor(existing: Bookmark?, initialPath: String) {
-        editor = EditorRequest(bookmark: existing, initialPath: initialPath)
+    func presentEditor(
+        existing: Bookmark?,
+        initialPath: String,
+        closeAfterSave: Bool = false
+    ) {
+        AppDelegate.recordEvent("editor requested; path=\(initialPath)")
+        editor = EditorRequest(
+            bookmark: existing,
+            initialPath: initialPath,
+            closeAfterSave: closeAfterSave
+        )
     }
 
     func dismissEditor() {
         editor = nil
         refresh()
+    }
+
+    /// Selects a bookmark after it was saved and makes sure the list shows it:
+    /// the face switches to Bookmarks, and a filter that would hide the row is
+    /// dropped. The row is scrolled into view like a deliberate arrow move.
+    func focus(_ bookmark: Bookmark) {
+        if mode != .bookmarks {
+            show(.bookmarks)
+        }
+        if !results.contains(where: { $0.id == bookmark.id }) {
+            query = ""
+        }
+        refresh()
+        selectedID = bookmark.id
+        requestScroll(to: bookmark.id)
     }
 
     /// The path a new bookmark starts with: the last path Alt Right saw, then
@@ -250,5 +288,43 @@ final class QuickPanelModel: ObservableObject {
 
     func togglePin(_ bookmark: Bookmark) {
         store.setPinned(!bookmark.pinned, path: bookmark.path)
+    }
+
+    // MARK: - Delete mode
+
+    func beginDeleteMode(with bookmark: Bookmark?) {
+        deleteMode = true
+        deleteSelection = Set([bookmark?.id].compactMap { $0 })
+    }
+
+    func endDeleteMode() {
+        guard deleteMode || !deleteSelection.isEmpty else { return }
+        deleteMode = false
+        deleteSelection.removeAll()
+    }
+
+    func toggleDelete(_ bookmark: Bookmark) {
+        if deleteSelection.contains(bookmark.id) {
+            deleteSelection.remove(bookmark.id)
+        } else {
+            deleteSelection.insert(bookmark.id)
+        }
+    }
+
+    func performDelete() {
+        guard !deleteSelection.isEmpty else { return }
+        try? store.remove(paths: deleteSelection)
+        endDeleteMode()
+    }
+
+    /// True once every visible row is ticked: the Select All button then offers
+    /// the way back out instead of doing nothing.
+    var allSelected: Bool {
+        !results.isEmpty && deleteSelection.count == results.count
+    }
+
+    var deleteButtonTitle: String {
+        if deleteSelection.isEmpty { return L("Delete") }
+        return String(format: L("Delete %d"), deleteSelection.count)
     }
 }

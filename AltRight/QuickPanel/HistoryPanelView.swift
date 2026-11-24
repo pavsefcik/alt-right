@@ -208,7 +208,7 @@ struct HistoryPanelView: View {
     }
 
     private func open(_ entry: HistoryEntry) {
-        StatusItemController.shared.closePanel()
+        StatusItemController.shared.closePanel(reason: "open copied path (view)")
         BookmarkOpener.open(path: entry.path)
     }
 
