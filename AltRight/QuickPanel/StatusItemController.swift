@@ -52,10 +52,13 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = item.button {
+            // Heaviest weight the symbol offers: at 18 pt the default weight
+            // disappears next to Apple’s own menu-bar glyphs.
+            let configuration = NSImage.SymbolConfiguration(pointSize: 18, weight: .black)
             let image = NSImage(
                 systemSymbolName: "arrow.up.right",
                 accessibilityDescription: L("Alt Right")
-            )
+            )?.withSymbolConfiguration(configuration)
             image?.isTemplate = true
             button.image = image
             button.toolTip = L("Alt Right")
@@ -684,6 +687,12 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func plainItem(_ title: String, action: Selector) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
+        // No row in this menu has an icon the app drew itself. AppKit would
+        // otherwise supply one for “Settings…” on macOS 26 and reserve an
+        // (empty) image column for the rest of the rows.
+        if #available(macOS 27.0, *) {
+            item.preferredImageVisibility = .hidden
+        }
         return item
     }
 
