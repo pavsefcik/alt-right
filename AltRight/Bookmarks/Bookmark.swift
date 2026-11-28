@@ -57,8 +57,9 @@ struct Bookmark: Codable, Identifiable, Hashable {
     /// The input usually comes from somewhere that adds noise of its own: a
     /// shell wraps paths in `'…'`, Finder's drag-and-drop hands over a `file://`
     /// URL, a chat message escapes spaces as `My\ Folder`, and a colleague
-    /// sends an `smb://` URL. All of those describe a local path, so they are
-    /// reduced to one.
+    /// sends an `smb://` URL. The first three describe a local path, so they are
+    /// reduced to one. A network URL is kept as a URL: the share may not be
+    /// mounted yet, and `NSWorkspace` can connect to it directly.
     static func normalizedPath(_ raw: String) -> String? {
         var text = stripQuotes(raw)
         guard !text.isEmpty else { return nil }
@@ -81,7 +82,7 @@ struct Bookmark: Codable, Identifiable, Hashable {
             case "file":
                 return fileURLPath(text)
             case "smb", "afp", "cifs", "nfs", "webdav":
-                return networkURLPath(text)
+                return networkURL(text)
             default:
                 // `notes:…` is not a path; neither is any other unknown scheme.
                 return nil
@@ -199,19 +200,45 @@ struct Bookmark: Codable, Identifiable, Hashable {
         return filePath(rest.removingPercentEncoding ?? rest)
     }
 
-    /// An `smb://server/share/folder` URL points at `/Volumes/share/folder` on
-    /// a Mac where the share is mounted under its own name.
-    private static func networkURLPath(_ text: String) -> String? {
-        var components = URLComponents(string: text)
-        if components == nil,
+    /// Network schemes the app can bookmark and hand to `NSWorkspace`, which
+    /// connects to a server and mounts the share when needed.
+    static let networkSchemes: Set<String> = ["smb", "afp", "cifs", "nfs", "webdav"]
+
+    /// Keeps `smb://server/share` as a URL instead of guessing at
+    /// `/Volumes/share`. Before the share is mounted that path does not exist,
+    /// so the URL is the only form that can actually be opened later.
+    static func networkURL(_ text: String) -> String? {
+        var candidates = [text]
+        if !text.contains("%"),
            let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-            components = URLComponents(string: encoded)
+            candidates.append(encoded)
         }
 
-        guard let components else { return nil }
-        return networkVolumePath(
-            components.percentEncodedPath.removingPercentEncoding ?? components.path
-        )
+        for candidate in candidates {
+            guard let components = URLComponents(string: candidate),
+                  let scheme = components.scheme?.lowercased(),
+                  networkSchemes.contains(scheme),
+                  let host = components.host,
+                  !host.isEmpty else { continue }
+
+            var normalized = components
+            normalized.scheme = scheme
+            return normalized.string
+        }
+        return nil
+    }
+
+    static func isNetworkURL(_ text: String) -> Bool {
+        guard let scheme = URL(string: text)?.scheme?.lowercased() else { return false }
+        return networkSchemes.contains(scheme)
+    }
+
+    /// The `/Volumes/…` form Finder's *Go to Folder* understands, for the few
+    /// places that need a mount point rather than a URL.
+    static func networkMountPath(_ text: String) -> String? {
+        guard let components = URLComponents(string: text) else { return nil }
+        let path = components.percentEncodedPath.removingPercentEncoding ?? components.path
+        return networkVolumePath(path)
     }
 
     private static func networkVolumePath(_ path: String) -> String? {
@@ -279,8 +306,14 @@ struct Bookmark: Codable, Identifiable, Hashable {
     static func automaticTitle(for path: String) -> String {
         if let url = URL(string: path),
            let scheme = url.scheme?.lowercased(),
-           scheme == "http" || scheme == "https" {
-            return url.host ?? path
+           let host = url.host {
+            if scheme == "http" || scheme == "https" {
+                return host
+            }
+            if networkSchemes.contains(scheme) {
+                let last = url.lastPathComponent
+                return last.isEmpty ? host : last
+            }
         }
 
         let last = URL(fileURLWithPath: path).lastPathComponent

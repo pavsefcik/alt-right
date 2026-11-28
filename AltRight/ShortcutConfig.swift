@@ -8,6 +8,7 @@ enum ShortcutAction: String, CaseIterable, Codable, Hashable {
     case addBookmark
     case searchBookmarks
     case history
+    case copies
     case pastePath
     case mergeWindows
 
@@ -16,6 +17,7 @@ enum ShortcutAction: String, CaseIterable, Codable, Hashable {
         case .addBookmark: return L("Add Bookmark")
         case .searchBookmarks: return L("Bookmarks")
         case .history: return L("Copied Paths")
+        case .copies: return L("Copies")
         case .pastePath: return L("Paste Path")
         case .mergeWindows: return L("Merge All Windows")
         }
@@ -62,6 +64,7 @@ struct ShortcutSettings: Codable, Equatable {
     var addBookmark: Shortcut
     var searchBookmarks: Shortcut
     var history: Shortcut
+    var copies: Shortcut
     var pastePath: Shortcut
     var mergeWindows: Shortcut
 
@@ -81,6 +84,11 @@ struct ShortcutSettings: Codable, Equatable {
             modifiers: UInt32(cmdKey | controlKey),
             key: "H"
         ),
+        copies: Shortcut(
+            keyCode: UInt32(kVK_ANSI_C),
+            modifiers: UInt32(cmdKey | controlKey),
+            key: "C"
+        ),
         pastePath: Shortcut(
             keyCode: UInt32(kVK_ANSI_G),
             modifiers: UInt32(cmdKey | optionKey | shiftKey),
@@ -97,6 +105,7 @@ struct ShortcutSettings: Codable, Equatable {
         case addBookmark
         case searchBookmarks
         case history
+        case copies
         case pastePath
         case mergeWindows
     }
@@ -105,19 +114,21 @@ struct ShortcutSettings: Codable, Equatable {
         addBookmark: Shortcut,
         searchBookmarks: Shortcut,
         history: Shortcut,
+        copies: Shortcut,
         pastePath: Shortcut,
         mergeWindows: Shortcut
     ) {
         self.addBookmark = addBookmark
         self.searchBookmarks = searchBookmarks
         self.history = history
+        self.copies = copies
         self.pastePath = pastePath
         self.mergeWindows = mergeWindows
     }
 
-    /// Tolerant decoding: old files predate `addBookmark`, `pastePath` and
-    /// `mergeWindows`. Missing keys fall back to the standard combination
-    /// instead of throwing the whole settings file away.
+    /// Tolerant decoding: old files predate `addBookmark`, `copies`,
+    /// `pastePath` and `mergeWindows`. Missing keys fall back to the standard
+    /// combination instead of throwing the whole settings file away.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let standard = ShortcutSettings.standard
@@ -133,6 +144,10 @@ struct ShortcutSettings: Codable, Equatable {
             Shortcut.self,
             forKey: .history
         ) ?? standard.history
+        copies = try container.decodeIfPresent(
+            Shortcut.self,
+            forKey: .copies
+        ) ?? standard.copies
         pastePath = try container.decodeIfPresent(
             Shortcut.self,
             forKey: .pastePath
@@ -149,6 +164,7 @@ struct ShortcutSettings: Codable, Equatable {
             case .addBookmark: return addBookmark
             case .searchBookmarks: return searchBookmarks
             case .history: return history
+            case .copies: return copies
             case .pastePath: return pastePath
             case .mergeWindows: return mergeWindows
             }
@@ -158,6 +174,7 @@ struct ShortcutSettings: Codable, Equatable {
             case .addBookmark: addBookmark = newValue
             case .searchBookmarks: searchBookmarks = newValue
             case .history: history = newValue
+            case .copies: copies = newValue
             case .pastePath: pastePath = newValue
             case .mergeWindows: mergeWindows = newValue
             }

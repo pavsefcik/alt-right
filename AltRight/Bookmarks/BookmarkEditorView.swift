@@ -184,6 +184,9 @@ struct BookmarkEditorView: View {
         if normalized.lowercased().hasPrefix("http") {
             return String(format: L("Opens in your browser: %@"), normalized)
         }
+        if Bookmark.isNetworkURL(normalized) {
+            return String(format: L("Connects to the network share: %@"), normalized)
+        }
         if !exists {
             return String(format: L("Not on disk right now: %@"), normalized)
         }
@@ -336,6 +339,7 @@ private struct PathTextField: NSViewRepresentable {
         field.cell?.wraps = false
         field.cell?.isScrollable = true
         field.setAccessibilityLabel(accessibilityLabel)
+        field.placeholderString = L("Folder, file, or URL")
         field.stringValue = text
         field.wantsInitialFocus = wantsInitialFocus
         field.translatesAutoresizingMaskIntoConstraints = false

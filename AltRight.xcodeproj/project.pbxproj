@@ -485,7 +485,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.103.0;
+				MARKETING_VERSION = 0.103.1-rc1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pavel.altright;
 				PRODUCT_NAME = "Alt Right";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -508,7 +508,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.103.0;
+				MARKETING_VERSION = 0.103.1-rc1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pavel.altright;
 				PRODUCT_NAME = "Alt Right";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -531,7 +531,7 @@
 					"$(inherited)",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 0.103.0;
+				MARKETING_VERSION = 0.103.1-rc1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pavel.altright.FinderSync;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -555,7 +555,7 @@
 					"$(inherited)",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 0.103.0;
+				MARKETING_VERSION = 0.103.1-rc1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.pavel.altright.FinderSync;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

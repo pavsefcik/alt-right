@@ -53,10 +53,17 @@ enum BookmarkOpener {
         onRemove: (() -> Void)? = nil
     ) -> Bool {
         if let url = URL(string: path),
-           let scheme = url.scheme?.lowercased(),
-           scheme == "http" || scheme == "https" {
-            NSWorkspace.shared.open(url)
-            return true
+           let scheme = url.scheme?.lowercased() {
+            if scheme == "http" || scheme == "https" {
+                NSWorkspace.shared.open(url)
+                return true
+            }
+            // A network share is opened as a URL so Finder can mount it (and
+            // ask for credentials) when it is not connected right now.
+            if Bookmark.networkSchemes.contains(scheme) {
+                NSWorkspace.shared.open(url)
+                return true
+            }
         }
 
         let url = URL(fileURLWithPath: path)

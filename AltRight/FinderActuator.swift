@@ -74,12 +74,15 @@ enum FinderActuator {
         }
 
         // Finder's Go to Folder only understands a plain path. A quoted or
-        // shell-escaped path (or an smb:// URL) would just beep there, so put
-        // the cleaned form on the pasteboard before pasting it.
+        // shell-escaped path would just beep there, and so would an `smb://`
+        // URL, so put the cleaned form on the pasteboard before pasting it.
         if let normalized = Bookmark.normalizedPath(raw), normalized != raw {
+            let pasteValue = Bookmark.isNetworkURL(normalized)
+                ? (Bookmark.networkMountPath(normalized) ?? normalized)
+                : normalized
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
-            pasteboard.setString(normalized, forType: .string)
+            pasteboard.setString(pasteValue, forType: .string)
         }
 
         activateFinder()

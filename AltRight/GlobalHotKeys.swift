@@ -90,6 +90,11 @@ final class GlobalHotKeys {
                 BookmarkCoordinator.shared.showHistory()
             }
         }
+        register(settings.copies, id: 6) {
+            Task { @MainActor in
+                BookmarkCoordinator.shared.showCopyHistory()
+            }
+        }
         register(settings.pastePath, id: 3) {
             Task { @MainActor in
                 FinderActuator.perform(.pastePath)

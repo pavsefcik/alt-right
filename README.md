@@ -56,13 +56,14 @@ colour. RAL Design (`RAL 210 60 30`) is a different system and is not supported.
 | **Go to Folder** | `⇧⌘G` | Presses Finder’s own *Go to Folder*. |
 | **Connect to Server** | `⌘K` | Opens Finder’s *Connect to Server* dialog. |
 | **Merge All Windows** | `⌃⌘M` \* | Folds every Finder window into one window as tabs. |
-| **Add Bookmark** | `⇧⌥⌘B` \* | Pre-filled with Finder’s current selection, then the last path Alt Right saw, then the clipboard. A multi-item Finder selection is added in one go. |
+| **Add Bookmark** | `⇧⌥⌘B` \* | Pre-filled with Finder’s current selection, or the folder/server its front window shows when nothing is selected. Outside Finder it uses the last path Alt Right saw, then the clipboard. A multi-item Finder selection is added in one go. An unmounted network share is saved as an `smb://…` URL, so opening the bookmark connects the share. |
 | **Bookmarks** | `⌥⌘B` \* | Opens the panel on Bookmarks. |
 | **Copied Paths** | `⌃⌘H` \* | Opens the panel on Copied Paths. |
+| **Copies** | `⌃⌘C` \* | Opens the panel on Copies. |
 | **Settings** | `⌘,` | From the menu-bar menu. |
 
 \* Registered as a system-wide hot key, so it works while any app is frontmost — not only
-while a menu is open. All five are editable in Settings → Shortcuts.
+while a menu is open. All six are editable in Settings → Shortcuts.
 
 **In Finder**, right-click → **Alt Right** gives you **Copy Path**, **Paste Path** and
 **Add as Bookmark**. The other commands are one hot key away, or in the menu-bar menu.
@@ -81,7 +82,7 @@ the same way.
 
 ## Settings
 
-<img src="docs/settings.png" width="420" alt="Alt Right settings: setup status, opening mode, shortcuts and library counts">
+<img src="docs/settings.png" width="420" alt="Alt Right settings: setup status, opening mode, two-column shortcuts and library counts">
 
 - **Setup** — whether the Finder extension is enabled and Accessibility is granted, with
   **Grant…** and **Restart Finder** buttons.
@@ -89,9 +90,10 @@ the same way.
   window** (the default) or a **New tab** in the frontmost Finder window. A first folder
   still opens a window when no Finder window exists, and tabs need Accessibility; without it
   Alt Right falls back to a window.
-- **Shortcuts** — click a combination and press a new one. The change is live immediately in
-  the global hot keys, the menu-bar menu and the Finder submenu. **Restore Defaults** brings
-  the standard combinations back.
+- **Shortcuts** — six commands from Add Bookmark to Copies, laid out in two columns;
+  click a combination and press a new one. The change is live immediately in the global hot
+  keys, the menu-bar menu and the Finder submenu. **Restore Defaults** brings the standard
+  combinations back.
 - **Bookmarks / Copied Paths / Copies** — item counts, **Manage** (opens the panel) and
   **Clear All**.
 

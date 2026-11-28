@@ -286,6 +286,9 @@ func pathSymbol(_ path: String) -> String {
     if lower.hasPrefix("http://") || lower.hasPrefix("https://") {
         return "globe"
     }
+    if Bookmark.isNetworkURL(lower) {
+        return "network"
+    }
     var isDirectory: ObjCBool = false
     if FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) {
         return isDirectory.boolValue ? "folder.fill" : "doc.fill"

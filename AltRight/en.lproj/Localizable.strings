@@ -16,13 +16,15 @@
 "Browse…" = "Browse…";
 "Title" = "Title";
 "Description" = "Description";
+"A bookmark for this path already exists." = "A bookmark for this path already exists.";
+"Go to Existing Bookmark" = "Go to Existing Bookmark";
 "Enter an absolute path, a file URL, an SMB URL, or an HTTP(S) URL." = "Enter an absolute path, a file URL, an SMB URL, or an HTTP(S) URL.";
 "Opens in your browser: %@" = "Opens in your browser: %@";
+"Connects to the network share: %@" = "Connects to the network share: %@";
 "Not on disk right now: %@" = "Not on disk right now: %@";
 "Opens the folder: %@" = "Opens the folder: %@";
 "Reveals the file: %@" = "Reveals the file: %@";
 "Save" = "Save";
-"A bookmark for this path already exists." = "A bookmark for this path already exists.";
 "Choose" = "Choose";
 "Choose a folder or file to bookmark." = "Choose a folder or file to bookmark.";
 "New window" = "New window";
@@ -82,6 +84,7 @@
 "Use Copy Path in Finder — or press ⌥⌘C — and it appears here." = "Use Copy Path in Finder — or press ⌥⌘C — and it appears here.";
 "+ Bookmark" = "+ Bookmark";
 "Copies" = "Copies";
+"Delete %d" = "Delete %d";
 "Search bookmarks" = "Search bookmarks";
 "Sort bookmarks" = "Sort bookmarks";
 "Edit" = "Edit";
@@ -91,7 +94,6 @@
 "Add one from Finder or with Add Bookmark." = "Add one from Finder or with Add Bookmark.";
 "Deselect All" = "Deselect All";
 "Select All" = "Select All";
-"Delete %d" = "Delete %d";
 "Alt Right" = "Alt Right";
 "Paste Path" = "Paste Path";
 "Go to Folder" = "Go to Folder";
